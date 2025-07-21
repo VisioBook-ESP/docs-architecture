@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagramme de Gantt du Projet Visiobook</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .legend {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .legend-item {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 10px;
+        }
+        .color-box {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        .frontend { background-color: #42b883; }
+        .backend { background-color: #347474; }
+        .infrastructure { background-color: #ff7e67; }
+        .ia { background-color: #7b68ee; }
+        .testeur { background-color: #ffc107; }
+        .must { border-left: 5px solid #e74c3c; }
+        .should { border-left: 5px solid #3498db; }
+        .could { border-left: 5px solid #2ecc71; }
+        .milestone {
+            background-color: #f39c12;
+            border-radius: 50%;
+            width: 10px;
+            height: 10px;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .gantt-container {
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+        .gantt {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .gantt th, .gantt td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .gantt th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+        .gantt-header {
+            font-weight: bold;
+            background-color: #e9e9e9;
+        }
+        .gantt-bar {
+            height: 30px;
+            border-radius: 3px;
+            position: relative;
+        }
+        .gantt-bar-label {
+            position: absolute;
+            top: 50%;
+            left: 10px;
+            transform: translateY(-50%);
+            white-space: nowrap;
+            font-size: 12px;
+            color: #333;
+            text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.7);
+        }
+        .tab {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+            color: #333;
+        }
+        .tab button:hover {
+            background-color: #ddd;
+        }
+        .tab button.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .tabcontent {
+            display: none;
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            animation: fadeEffect 1s;
+        }
+        @keyframes fadeEffect {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Diagramme de Gantt du Projet Visiobook</h1>
+
+        <div class="legend">
+            <h3>Légende</h3>
+            <div>
+                <div class="legend-item"><div class="color-box frontend"></div> Frontend</div>
+                <div class="legend-item"><div class="color-box backend"></div> Backend</div>
+                <div class="legend-item"><div class="color-box infrastructure"></div> Infrastructure</div>
+                <div class="legend-item"><div class="color-box ia"></div> IA</div>
+                <div class="legend-item"><div class="color-box testeur"></div> Testeur</div>
+            </div>
+            <div>
+                <div class="legend-item"><div style="display: inline-block; border-left: 5px solid #e74c3c; padding-left: 5px;">MUST</div></div>
+                <div class="legend-item"><div style="display: inline-block; border-left: 5px solid #3498db; padding-left: 5px;">SHOULD</div></div>
+                <div class="legend-item"><div style="display: inline-block; border-left: 5px solid #2ecc71; padding-left: 5px;">COULD</div></div>
+                <div class="legend-item"><div class="milestone"></div> Jalon</div>
+            </div>
+        </div>
+
+        <div class="tab">
+            <button class="tablinks active" onclick="openTab(event, 'FullGantt')">Vue Complète</button>
+            <button class="tablinks" onclick="openTab(event, 'PI1')">PI 1</button>
+            <button class="tablinks" onclick="openTab(event, 'PI2')">PI 2</button>
+            <button class="tablinks" onclick="openTab(event, 'PI3')">PI 3</button>
+            <button class="tablinks" onclick="openTab(event, 'PI4')">PI 4</button>
+            <button class="tablinks" onclick="openTab(event, 'Teams')">Par Équipe</button>
+        </div>
+
+        <div id="FullGantt" class="tabcontent" style="display: block;">
+            <h2>Vue Complète du Projet (4 PI)</h2>
+            <div class="gantt-container">
+                <table class="gantt">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Élément</th>
+                            <th style="width: 100px;">Début</th>
+                            <th style="width: 100px;">Fin</th>
+                            <th style="width: 800px;">Calendrier (Août 2025 - Août 2026)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="gantt-header">
+                            <td colspan="4">Program Increments</td>
+                        </tr>
+                        <tr>
+                            <td>PI 1 : Fondation et Infrastructure</td>
+                            <td>18/08/25</td>
+                            <td>17/11/25</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(123, 104, 238, 0.3); width: 25%; margin-left: 0%;">
+                                    <span class="gantt-bar-label">PI 1</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>PI 2 : Moteur IA et Génération</td>
+                            <td>18/11/25</td>
+                            <td>17/02/26</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(66, 184, 131, 0.3); width: 25%; margin-left: 25%;">
+                                    <span class="gantt-bar-label">PI 2</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>PI 3 : Interfaces Utilisateur</td>
+                            <td>18/02/26</td>
+                            <td>17/05/26</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(52, 116, 116, 0.3); width: 25%; margin-left: 50%;">
+                                    <span class="gantt-bar-label">PI 3</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>PI 4 : Qualité et Déploiement</td>
+                            <td>18/05/26</td>
+                            <td>17/08/26</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(255, 126, 103, 0.3); width: 25%; margin-left: 75%;">
+                                    <span class="gantt-bar-label">PI 4</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Itérations</td>
+                        </tr>
+                        <tr>
+                            <td>Itération 1.1</td>
+                            <td>18/08/25</td>
+                            <td>17/09/25</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(123, 104, 238, 0.5); width: 8.33%; margin-left: 0%;">
+                                    <span class="gantt-bar-label">1.1</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Itération 1.2</td>
+                            <td>18/09/25</td>
+                            <td>17/10/25</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(123, 104, 238, 0.5); width: 8.33%; margin-left: 8.33%;">
+                                    <span class="gantt-bar-label">1.2</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Itération 1.3</td>
+                            <td>18/10/25</td>
+                            <td>17/11/25</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(123, 104, 238, 0.5); width: 8.33%; margin-left: 16.66%;">
+                                    <span class="gantt-bar-label">1.3</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Itération 2.1</td>
+                            <td>18/11/25</td>
+                            <td>17/12/25</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(66, 184, 131, 0.5); width: 8.33%; margin-left: 25%;">
+                                    <span class="gantt-bar-label">2.1</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Itération 2.2</td>
+                            <td>18/12/25</td>
+                            <td>17/01/26</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(66, 184, 131, 0.5); width: 8.33%; margin-left: 33.33%;">
+                                    <span class="gantt-bar-label">2.2</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Itération 2.3</td>
+                            <td>18/01/26</td>
+                            <td>17/02/26</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(66, 184, 131, 0.5); width: 8.33%; margin-left: 41.66%;">
+                                    <span class="gantt-bar-label">2.3</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Itération 3.1</td>
+                            <td>18/02/26</td>
+                            <td>17/03/26</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(52, 116, 116, 0.5); width: 8.33%; margin-left: 50%;">
+                                    <span class="gantt-bar-label">3.1</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Itération 3.2</td>
+                            <td>18/03/26</td>
+                            <td>17/04/26</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(52, 116, 116, 0.5); width: 8.33%; margin-left: 58.33%;">
+                                    <span class="gantt-bar-label">3.2</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Itération 3.3</td>
+                            <td>18/04/26</td>
+                            <td>17/05/26</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(52, 116, 116, 0.5); width: 8.33%; margin-left: 66.66%;">
+                                    <span class="gantt-bar-label">3.3</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Itération 4.1</td>
+                            <td>18/05/26</td>
+                            <td>17/06/26</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(255, 126, 103, 0.5); width: 8.33%; margin-left: 75%;">
+                                    <span class="gantt-bar-label">4.1</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Itération 4.2</td>
+                            <td>18/06/26</td>
+                            <td>17/07/26</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(255, 126, 103, 0.5); width: 8.33%; margin-left: 83.33%;">
+                                    <span class="gantt-bar-label">4.2</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Itération 4.3</td>
+                            <td>18/07/26</td>
+                            <td>17/08/26</td>
+                            <td>
+                                <div class="gantt-bar" style="background-color: rgba(255, 126, 103, 0.5); width: 8.33%; margin-left: 91.66%;">
+                                    <span class="gantt-bar-label">4.3</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Jalons</td>
+                        </tr>
+                        <tr>
+                            <td>Infrastructure opérationnelle</td>
+                            <td>17/11/25</td>
+                            <td>17/11/25</td>
+                            <td>
+                                <div class="milestone" style="margin-left: 25%;"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Génération d'images et animations</td>
+                            <td>17/02/26</td>
+                            <td>17/02/26</td>
+                            <td>
+                                <div class="milestone" style="margin-left: 50%;"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Application complète</td>
+                            <td>17/05/26</td>
+                            <td>17/05/26</td>
+                            <td>
+                                <div class="milestone" style="margin-left: 75%;"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Application en production</td>
+                            <td>17/08/26</td>
+                            <td>17/08/26</td>
+                            <td>
+                                <div class="milestone" style="margin-left: 100%;"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="PI1" class="tabcontent">
+            <h2>PI 1 : Fondation et Infrastructure (18/08/25 - 17/11/25)</h2>
+            <div class="gantt-container">
+                <table class="gantt">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Tâche</th>
+                            <th style="width: 100px;">Début</th>
+                            <th style="width: 100px;">Fin</th>
+                            <th style="width: 800px;">Calendrier (Août - Novembre 2025)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="gantt-header">
+                            <td colspan="4">Itération 1.1 (18/08/25 - 17/09/25)</td>
+                        </tr>
+                        <tr>
+                            <td>Architecture Technique (MUST)</td>
+                            <td>18/08/25</td>
+                            <td>17/09/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #ff7e67; width: 33.33%; margin-left: 0%;">
+                                    <span class="gantt-bar-label">Infrastructure</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Infrastructure Cloud et GPU (MUST)</td>
+                            <td>18/08/25</td>
+                            <td>17/09/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #ff7e67; width: 33.33%; margin-left: 0%;">
+                                    <span class="gantt-bar-label">Infrastructure</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Ingestion de Contenu (début) (MUST)</td>
+                            <td>25/08/25</td>
+                            <td>17/09/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 25%; margin-left: 8.33%;">
+                                    <span class="gantt-bar-label">IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Itération 1.2 (18/09/25 - 17/10/25)</td>
+                        </tr>
+                        <tr>
+                            <td>Base de Données et Stockage (MUST)</td>
+                            <td>18/09/25</td>
+                            <td>17/10/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #347474; width: 33.33%; margin-left: 33.33%;">
+                                    <span class="gantt-bar-label">Backend</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Ingestion de Contenu (fin) (MUST)</td>
+                            <td>18/09/25</td>
+                            <td>10/10/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 25%; margin-left: 33.33%;">
+                                    <span class="gantt-bar-label">IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Analyse Sémantique (début) (MUST)</td>
+                            <td>01/10/25</td>
+                            <td>17/10/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 16.67%; margin-left: 50%;">
+                                    <span class="gantt-bar-label">IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Itération 1.3 (18/10/25 - 17/11/25)</td>
+                        </tr>
+                        <tr>
+                            <td>Sécurité et Protection des Données (SHOULD)</td>
+                            <td>18/10/25</td>
+                            <td>10/11/25</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #ff7e67; width: 25%; margin-left: 66.67%;">
+                                    <span class="gantt-bar-label">Infrastructure</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Analyse Sémantique (fin) (MUST)</td>
+                            <td>18/10/25</td>
+                            <td>10/11/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 25%; margin-left: 66.67%;">
+                                    <span class="gantt-bar-label">IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Application Web (début) (MUST)</td>
+                            <td>25/10/25</td>
+                            <td>17/11/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #42b883; width: 25%; margin-left: 75%;">
+                                    <span class="gantt-bar-label">Frontend</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Jalon</td>
+                        </tr>
+                        <tr>
+                            <td>Infrastructure opérationnelle</td>
+                            <td>17/11/25</td>
+                            <td>17/11/25</td>
+                            <td>
+                                <div class="milestone" style="margin-left: 100%;"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="PI2" class="tabcontent">
+            <h2>PI 2 : Moteur IA et Génération de Contenu (18/11/25 - 17/02/26)</h2>
+            <div class="gantt-container">
+                <table class="gantt">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Tâche</th>
+                            <th style="width: 100px;">Début</th>
+                            <th style="width: 100px;">Fin</th>
+                            <th style="width: 800px;">Calendrier (Novembre 2025 - Février 2026)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="gantt-header">
+                            <td colspan="4">Itération 2.1 (18/11/25 - 17/12/25)</td>
+                        </tr>
+                        <tr>
+                            <td>Extraction de Scènes (MUST)</td>
+                            <td>18/11/25</td>
+                            <td>10/12/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 25%; margin-left: 0%;">
+                                    <span class="gantt-bar-label">IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Génération d'Images (début) (MUST)</td>
+                            <td>25/11/25</td>
+                            <td>17/12/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 25%; margin-left: 8.33%;">
+                                    <span class="gantt-bar-label">IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Application Web (suite) (MUST)</td>
+                            <td>18/11/25</td>
+                            <td>17/12/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #42b883; width: 33.33%; margin-left: 0%;">
+                                    <span class="gantt-bar-label">Frontend</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Itération 2.2 (18/12/25 - 17/01/26)</td>
+                        </tr>
+                        <tr>
+                            <td>Génération d'Images (fin) (MUST)</td>
+                            <td>18/12/25</td>
+                            <td>10/01/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 25%; margin-left: 33.33%;">
+                                    <span class="gantt-bar-label">IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Création d'Animations (début) (MUST)</td>
+                            <td>20/12/25</td>
+                            <td>17/01/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 30%; margin-left: 36.67%;">
+                                    <span class="gantt-bar-label">IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Résumés et Condensation (SHOULD)</td>
+                            <td>18/12/25</td>
+                            <td>17/01/26</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #7b68ee; width: 33.33%; margin-left: 33.33%;">
+                                    <span class="gantt-bar-label">IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Itération 2.3 (18/01/26 - 17/02/26)</td>
+                        </tr>
+                        <tr>
+                            <td>Création d'Animations (fin) (MUST)</td>
+                            <td>18/01/26</td>
+                            <td>10/02/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 25%; margin-left: 66.67%;">
+                                    <span class="gantt-bar-label">IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Synthèse Vocale (début) (SHOULD)</td>
+                            <td>25/01/26</td>
+                            <td>17/02/26</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #7b68ee; width: 25%; margin-left: 75%;">
+                                    <span class="gantt-bar-label">IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Application Web (suite) (MUST)</td>
+                            <td>18/01/26</td>
+                            <td>17/02/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #42b883; width: 33.33%; margin-left: 66.67%;">
+                                    <span class="gantt-bar-label">Frontend</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Jalon</td>
+                        </tr>
+                        <tr>
+                            <td>Génération d'images et animations</td>
+                            <td>17/02/26</td>
+                            <td>17/02/26</td>
+                            <td>
+                                <div class="milestone" style="margin-left: 100%;"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="PI3" class="tabcontent">
+            <h2>PI 3 : Interfaces Utilisateur et Finalisation du Contenu Multimédia (18/02/26 - 17/05/26)</h2>
+            <div class="gantt-container">
+                <table class="gantt">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Tâche</th>
+                            <th style="width: 100px;">Début</th>
+                            <th style="width: 100px;">Fin</th>
+                            <th style="width: 800px;">Calendrier (Février - Mai 2026)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="gantt-header">
+                            <td colspan="4">Itération 3.1 (18/02/26 - 17/03/26)</td>
+                        </tr>
+                        <tr>
+                            <td>Synthèse Vocale (fin) (SHOULD)</td>
+                            <td>18/02/26</td>
+                            <td>10/03/26</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #7b68ee; width: 25%; margin-left: 0%;">
+                                    <span class="gantt-bar-label">IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Effets Sonores et Musique (COULD)</td>
+                            <td>25/02/26</td>
+                            <td>17/03/26</td>
+                            <td>
+                                <div class="gantt-bar could" style="background-color: #7b68ee; width: 25%; margin-left: 8.33%;">
+                                    <span class="gantt-bar-label">IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Application Web (fin) (MUST)</td>
+                            <td>18/02/26</td>
+                            <td>17/03/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #42b883; width: 33.33%; margin-left: 0%;">
+                                    <span class="gantt-bar-label">Frontend</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Itération 3.2 (18/03/26 - 17/04/26)</td>
+                        </tr>
+                        <tr>
+                            <td>Assemblage du Storyboard (MUST)</td>
+                            <td>18/03/26</td>
+                            <td>10/04/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 25%; margin-left: 33.33%;">
+                                    <span class="gantt-bar-label">IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Application Mobile (début) (SHOULD)</td>
+                            <td>18/03/26</td>
+                            <td>17/04/26</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #42b883; width: 33.33%; margin-left: 33.33%;">
+                                    <span class="gantt-bar-label">Frontend</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Personnalisation (début) (MUST)</td>
+                            <td>25/03/26</td>
+                            <td>17/04/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #42b883; width: 25%; margin-left: 41.67%;">
+                                    <span class="gantt-bar-label">Frontend</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Itération 3.3 (18/04/26 - 17/05/26)</td>
+                        </tr>
+                        <tr>
+                            <td>Application Mobile (fin) (SHOULD)</td>
+                            <td>18/04/26</td>
+                            <td>10/05/26</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #42b883; width: 25%; margin-left: 66.67%;">
+                                    <span class="gantt-bar-label">Frontend</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Personnalisation (fin) (MUST)</td>
+                            <td>18/04/26</td>
+                            <td>10/05/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #42b883; width: 25%; margin-left: 66.67%;">
+                                    <span class="gantt-bar-label">Frontend</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Inscription et Authentification (MUST)</td>
+                            <td>18/04/26</td>
+                            <td>17/05/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #347474; width: 33.33%; margin-left: 66.67%;">
+                                    <span class="gantt-bar-label">Backend</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Jalon</td>
+                        </tr>
+                        <tr>
+                            <td>Application complète</td>
+                            <td>17/05/26</td>
+                            <td>17/05/26</td>
+                            <td>
+                                <div class="milestone" style="margin-left: 100%;"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="PI4" class="tabcontent">
+            <h2>PI 4 : Qualité, Optimisation et Déploiement (18/05/26 - 17/08/26)</h2>
+            <div class="gantt-container">
+                <table class="gantt">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Tâche</th>
+                            <th style="width: 100px;">Début</th>
+                            <th style="width: 100px;">Fin</th>
+                            <th style="width: 800px;">Calendrier (Mai - Août 2026)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="gantt-header">
+                            <td colspan="4">Itération 4.1 (18/05/26 - 17/06/26)</td>
+                        </tr>
+                        <tr>
+                            <td>Historique et Gestion des Projets (SHOULD)</td>
+                            <td>18/05/26</td>
+                            <td>10/06/26</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #42b883; width: 25%; margin-left: 0%;">
+                                    <span class="gantt-bar-label">Frontend</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Système de Paiement (MUST)</td>
+                            <td>18/05/26</td>
+                            <td>17/06/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #347474; width: 33.33%; margin-left: 0%;">
+                                    <span class="gantt-bar-label">Backend</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Tests Fonctionnels (début) (MUST)</td>
+                            <td>25/05/26</td>
+                            <td>17/06/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #ffc107; width: 25%; margin-left: 8.33%;">
+                                    <span class="gantt-bar-label">Testeur</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Itération 4.2 (18/06/26 - 17/07/26)</td>
+                        </tr>
+                        <tr>
+                            <td>Tests Fonctionnels (fin) (MUST)</td>
+                            <td>18/06/26</td>
+                            <td>05/07/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #ffc107; width: 20%; margin-left: 33.33%;">
+                                    <span class="gantt-bar-label">Testeur</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Tests Spécifiques IA (MUST)</td>
+                            <td>18/06/26</td>
+                            <td>10/07/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #ffc107; width: 25%; margin-left: 33.33%;">
+                                    <span class="gantt-bar-label">Testeur</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Optimisation des Performances (SHOULD)</td>
+                            <td>25/06/26</td>
+                            <td>17/07/26</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #ff7e67; width: 25%; margin-left: 41.67%;">
+                                    <span class="gantt-bar-label">Infrastructure</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Itération 4.3 (18/07/26 - 17/08/26)</td>
+                        </tr>
+                        <tr>
+                            <td>Expérience Utilisateur (SHOULD)</td>
+                            <td>18/07/26</td>
+                            <td>05/08/26</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #ffc107; width: 20%; margin-left: 66.67%;">
+                                    <span class="gantt-bar-label">Testeur</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Mise en Production (MUST)</td>
+                            <td>18/07/26</td>
+                            <td>10/08/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #ff7e67; width: 25%; margin-left: 66.67%;">
+                                    <span class="gantt-bar-label">Infrastructure</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Monitoring et Support (MUST)</td>
+                            <td>25/07/26</td>
+                            <td>17/08/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #ff7e67; width: 25%; margin-left: 75%;">
+                                    <span class="gantt-bar-label">Infrastructure</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Jalon</td>
+                        </tr>
+                        <tr>
+                            <td>Application en production</td>
+                            <td>17/08/26</td>
+                            <td>17/08/26</td>
+                            <td>
+                                <div class="milestone" style="margin-left: 100%;"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="Teams" class="tabcontent">
+            <h2>Répartition par Équipe</h2>
+            <div class="gantt-container">
+                <table class="gantt">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Équipe / Tâche</th>
+                            <th style="width: 100px;">Début</th>
+                            <th style="width: 100px;">Fin</th>
+                            <th style="width: 800px;">Calendrier (Août 2025 - Août 2026)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="gantt-header">
+                            <td colspan="4">Frontend</td>
+                        </tr>
+                        <tr>
+                            <td>Application Web</td>
+                            <td>25/10/25</td>
+                            <td>17/03/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #42b883; width: 41.67%; margin-left: 16.67%;">
+                                    <span class="gantt-bar-label">Application Web</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Application Mobile</td>
+                            <td>18/03/26</td>
+                            <td>10/05/26</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #42b883; width: 16.67%; margin-left: 58.33%;">
+                                    <span class="gantt-bar-label">Application Mobile</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Personnalisation</td>
+                            <td>25/03/26</td>
+                            <td>10/05/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #42b883; width: 12.5%; margin-left: 62.5%;">
+                                    <span class="gantt-bar-label">Personnalisation</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Historique et Gestion des Projets</td>
+                            <td>18/05/26</td>
+                            <td>10/06/26</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #42b883; width: 8.33%; margin-left: 75%;">
+                                    <span class="gantt-bar-label">Historique</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Backend</td>
+                        </tr>
+                        <tr>
+                            <td>Base de Données et Stockage</td>
+                            <td>18/09/25</td>
+                            <td>17/10/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #347474; width: 8.33%; margin-left: 8.33%;">
+                                    <span class="gantt-bar-label">Base de Données</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Inscription et Authentification</td>
+                            <td>18/04/26</td>
+                            <td>17/05/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #347474; width: 8.33%; margin-left: 66.67%;">
+                                    <span class="gantt-bar-label">Authentification</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Système de Paiement</td>
+                            <td>18/05/26</td>
+                            <td>17/06/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #347474; width: 8.33%; margin-left: 75%;">
+                                    <span class="gantt-bar-label">Paiement</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Infrastructure</td>
+                        </tr>
+                        <tr>
+                            <td>Architecture Technique</td>
+                            <td>18/08/25</td>
+                            <td>17/09/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #ff7e67; width: 8.33%; margin-left: 0%;">
+                                    <span class="gantt-bar-label">Architecture</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Infrastructure Cloud et GPU</td>
+                            <td>18/08/25</td>
+                            <td>17/09/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #ff7e67; width: 8.33%; margin-left: 0%;">
+                                    <span class="gantt-bar-label">Cloud & GPU</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Sécurité et Protection des Données</td>
+                            <td>18/10/25</td>
+                            <td>10/11/25</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #ff7e67; width: 6.25%; margin-left: 16.67%;">
+                                    <span class="gantt-bar-label">Sécurité</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Optimisation des Performances</td>
+                            <td>25/06/26</td>
+                            <td>17/07/26</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #ff7e67; width: 6.25%; margin-left: 85.42%;">
+                                    <span class="gantt-bar-label">Optimisation</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Mise en Production</td>
+                            <td>18/07/26</td>
+                            <td>10/08/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #ff7e67; width: 6.25%; margin-left: 91.67%;">
+                                    <span class="gantt-bar-label">Production</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">IA</td>
+                        </tr>
+                        <tr>
+                            <td>Ingestion de Contenu</td>
+                            <td>25/08/25</td>
+                            <td>10/10/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 12.5%; margin-left: 2.08%;">
+                                    <span class="gantt-bar-label">Ingestion</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Analyse Sémantique</td>
+                            <td>01/10/25</td>
+                            <td>10/11/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 10.42%; margin-left: 14.58%;">
+                                    <span class="gantt-bar-label">Analyse</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Extraction de Scènes</td>
+                            <td>18/11/25</td>
+                            <td>10/12/25</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 6.25%; margin-left: 25%;">
+                                    <span class="gantt-bar-label">Extraction</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Génération d'Images</td>
+                            <td>25/11/25</td>
+                            <td>10/01/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 12.5%; margin-left: 27.08%;">
+                                    <span class="gantt-bar-label">Images</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Création d'Animations</td>
+                            <td>20/12/25</td>
+                            <td>10/02/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 14.58%; margin-left: 33.33%;">
+                                    <span class="gantt-bar-label">Animations</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Synthèse Vocale</td>
+                            <td>25/01/26</td>
+                            <td>10/03/26</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #7b68ee; width: 12.5%; margin-left: 43.75%;">
+                                    <span class="gantt-bar-label">Voix</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Assemblage du Storyboard</td>
+                            <td>18/03/26</td>
+                            <td>10/04/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #7b68ee; width: 6.25%; margin-left: 58.33%;">
+                                    <span class="gantt-bar-label">Storyboard</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="gantt-header">
+                            <td colspan="4">Testeur</td>
+                        </tr>
+                        <tr>
+                            <td>Tests Fonctionnels</td>
+                            <td>25/05/26</td>
+                            <td>05/07/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #ffc107; width: 10.42%; margin-left: 75%;">
+                                    <span class="gantt-bar-label">Tests Fonctionnels</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Tests Spécifiques IA</td>
+                            <td>18/06/26</td>
+                            <td>10/07/26</td>
+                            <td>
+                                <div class="gantt-bar must" style="background-color: #ffc107; width: 6.25%; margin-left: 83.33%;">
+                                    <span class="gantt-bar-label">Tests IA</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Expérience Utilisateur</td>
+                            <td>18/07/26</td>
+                            <td>05/08/26</td>
+                            <td>
+                                <div class="gantt-bar should" style="background-color: #ffc107; width: 5.21%; margin-left: 91.67%;">
+                                    <span class="gantt-bar-label">UX</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+    </script>
+</body>
+</html>

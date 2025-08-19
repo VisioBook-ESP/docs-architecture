@@ -108,12 +108,12 @@ graph TB
 | Repository | Service Correspondant | État | Priorité | Effort Estimé |
 |------------|----------------------|------|----------|---------------|
 | `visiobook-database-service` | database-service | 🔴 **À développer** | CRITIQUE | 2 semaines |
-| `visiobook-api-gateway` | api-gateway-service | 🟡 **Base existante** | CRITIQUE | 1 semaine |
-| `visiobook-user-service` | user-service | 🟡 **Base existante** | ESSENTIEL | 1 semaine |
-| `visiobook-project-service` | project-service | 🟡 **Base existante** | ESSENTIEL | 1 semaine |
-| `visiobook-storage-service` | storage-service | 🟡 **Base existante** | ESSENTIEL | 1 semaine |
-| `visiobook-ai-analysis` | ai-analysis-service | 🟡 **Base existante** | PRIORITÉ IA | 2 semaines |
-| `visiobook-web-portal` | web-user-portal | 🟡 **Base existante** | PRIORITÉ FRONTEND | 3 semaines |
+| `visiobook-api-gateway` | api-gateway-service | 🔴 **À développer** | CRITIQUE | 1 semaine |
+| `visiobook-user-service` | user-service | 🔴 **À développer*** | ESSENTIEL | 1 semaine |
+| `visiobook-project-service` | project-service | 🔴 **À développer** | ESSENTIEL | 1 semaine |
+| `visiobook-storage-service` | storage-service | 🔴 **À développer** | ESSENTIEL | 1 semaine |
+| `visiobook-ai-analysis` | ai-analysis-service | 🔴 **À développer** | PRIORITÉ IA | 2 semaines |
+| `visiobook-web-portal` | web-user-portal | 🔴 **À développer** | PRIORITÉ FRONTEND | 3 semaines |
 | `visiobook-test-orchestrator` | test-orchestrator-service | 🔴 **À développer** | IMPORTANT | 2 semaines |
 
 ## 2. Microservices Prioritaires Identifiés

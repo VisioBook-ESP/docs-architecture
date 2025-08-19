@@ -109,7 +109,7 @@ graph TB
 |------------|----------------------|------|----------|---------------|
 | `visiobook-database-service` | database-service | 🔴 **À développer** | CRITIQUE | 2 semaines |
 | `visiobook-api-gateway` | api-gateway-service | 🔴 **À développer** | CRITIQUE | 1 semaine |
-| `visiobook-user-service` | user-service | 🔴 **À développer*** | ESSENTIEL | 1 semaine |
+| `visiobook-user-service` | user-service | 🔴 **À développer** | ESSENTIEL | 1 semaine |
 | `visiobook-project-service` | project-service | 🔴 **À développer** | ESSENTIEL | 1 semaine |
 | `visiobook-storage-service` | storage-service | 🔴 **À développer** | ESSENTIEL | 1 semaine |
 | `visiobook-ai-analysis` | ai-analysis-service | 🔴 **À développer** | PRIORITÉ IA | 2 semaines |

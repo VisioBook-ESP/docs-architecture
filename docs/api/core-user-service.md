@@ -216,12 +216,13 @@ RATE_LIMIT_MAX=100
   "email": "user@example.com",
   "role": "user|premium|admin",
   "subscription_type": "free|premium",
-  "permissions": ["domain:action:resource"],
   "iat": 1642234567,
   "exp": 1642320967,
   "jti": "token_unique_id"
 }
 ```
+
+> **📋 Référence** : Voir [Règles Communes](./regles_communes.md) pour la gestion des permissions basées sur les rôles simples.
 
 ### Niveaux de permissions
 - **admin** : Accès complet à tous les utilisateurs et données système

@@ -48,6 +48,22 @@ http://localhost:3000   # Web User Portal
 }
 ```
 
+### Gestion des Permissions
+Les permissions dans Visiobook sont basées sur un système de rôles simples, sans granularité fine :
+
+- **Pas de champ `permissions` dans le JWT** : Les permissions sont dérivées directement du champ `role`
+- **Contrôle d'accès simplifié** : Chaque endpoint vérifie le rôle requis (user/premium/admin)
+- **Héritage des permissions** : admin > premium > user (les rôles supérieurs incluent les permissions inférieures)
+
+```json
+{
+  "permission_model": "role_based_simple",
+  "granularity": "service_level",
+  "inheritance": true,
+  "roles_hierarchy": ["user", "premium", "admin"]
+}
+```
+
 ### Durées de Validité
 - **Access Token** : 15 minutes (900 secondes)
 - **Refresh Token** : 7 jours (604800 secondes)

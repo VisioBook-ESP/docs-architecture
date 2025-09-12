@@ -247,12 +247,13 @@ ENABLE_PROFILING=true
   "email": "user@example.com",
   "role": "user|premium|admin",
   "subscription_type": "free|premium",
-  "permissions": ["domain:action:resource"],
   "iat": 1642234567,
   "exp": 1642320967,
   "jti": "token_unique_id"
 }
 ```
+
+> **📋 Référence** : Voir [Règles Communes](./regles_communes.md) pour la gestion des permissions basées sur les rôles simples.
 
 ### Niveaux de permissions
 - **admin** : Accès complet aux modèles et gestion des ressources GPU
@@ -1199,7 +1200,7 @@ flowchart TD
 ```json
 {
   "error": {
-    "code": "GPU_MEMORY_EXHAUSTED",
+    "code": "VISIOBOOK_GPU_MEMORY_EXHAUSTED",
     "message": "Insufficient GPU memory for image generation",
     "details": {
       "required_memory_gb": 12.5,

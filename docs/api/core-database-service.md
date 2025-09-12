@@ -237,12 +237,13 @@ PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK=1
   "email": "user@example.com",
   "role": "user|premium|admin",
   "subscription_type": "free|premium",
-  "permissions": ["domain:action:resource"],
   "iat": 1642234567,
   "exp": 1642320967,
   "jti": "token_unique_id"
 }
 ```
+
+> **📋 Référence** : Voir [Règles Communes](./regles_communes.md) pour la gestion des permissions basées sur les rôles simples.
 
 ### Niveaux de permissions
 - **admin** : Accès complet aux opérations de maintenance et monitoring
@@ -890,10 +891,11 @@ interface AnalysisJob {
 - **Rétrocompatibilité** : Maintenue pendant 12 mois minimum
 
 ### Stratégie de migration
-1. **Dépréciation** : Annonce 6 mois avant suppression
-2. **Coexistence** : v1 et v2 fonctionnent en parallèle
+1. **Dépréciation** : Annonce 3 mois avant suppression
+2. **Coexistence** : v1 et v2 fonctionnent en parallèle pendant 6 mois
 3. **Migration automatique** : Scripts de migration des données
 4. **Documentation** : Guide de migration détaillé
+5. **Support** : Assistance technique pendant la transition
 
 ### Exemple de migration v1 → v2
 ```json

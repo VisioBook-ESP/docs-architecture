@@ -228,12 +228,13 @@ LOG_LEVEL=info
   "email": "user@example.com",
   "role": "user|premium|admin",
   "subscription_type": "free|premium",
-  "permissions": ["domain:action:resource"],
   "iat": 1642234567,
   "exp": 1642320967,
   "jti": "token_unique_id"
 }
 ```
+
+> **📋 Référence** : Voir [Règles Communes](./regles_communes.md) pour la gestion des permissions basées sur les rôles simples.
 
 ### Niveaux de permissions
 - **admin** : Accès complet à tous les projets et gestion système
@@ -492,7 +493,7 @@ X-Client-Version: <client_version>
 #### PUT /api/v1/projects/{project_id}
 **Description** : Mise à jour d'un projet
 
-**Permissions** : user, premium, admin (propriétaire, editor ou admin)
+**Permissions** : user, premium, admin (propriétaire de la ressource ou admin)
 
 **Requête** :
 ```json
@@ -647,7 +648,7 @@ X-Client-Version: <client_version>
 #### PUT /api/v1/projects/{project_id}/content
 **Description** : Mise à jour du contenu source d'un projet
 
-**Permissions** : user, premium, admin (propriétaire, editor ou admin)
+**Permissions** : user, premium, admin (propriétaire de la ressource ou admin)
 
 **Requête** :
 ```json
@@ -691,7 +692,7 @@ X-Client-Version: <client_version>
 #### GET /api/v1/projects/{project_id}/workflows
 **Description** : Liste des workflows d'un projet
 
-**Permissions** : user, premium, admin (propriétaire, collaborateur ou admin)
+**Permissions** : user, premium, admin (propriétaire de la ressource ou admin)
 
 **Réponse** :
 ```json
@@ -740,7 +741,7 @@ X-Client-Version: <client_version>
 #### POST /api/v1/projects/{project_id}/workflows
 **Description** : Démarrage d'un nouveau workflow
 
-**Permissions** : user, premium, admin (propriétaire, editor ou admin)
+**Permissions** : user, premium, admin (propriétaire de la ressource ou admin)
 
 **Requête** :
 ```json
@@ -782,7 +783,7 @@ X-Client-Version: <client_version>
 #### GET /api/v1/projects/{project_id}/workflows/{workflow_id}
 **Description** : Détails d'un workflow spécifique
 
-**Permissions** : user, premium, admin (propriétaire, collaborateur ou admin)
+**Permissions** : user, premium, admin (propriétaire de la ressource ou admin)
 
 **Réponse** :
 ```json
@@ -853,7 +854,7 @@ X-Client-Version: <client_version>
 #### GET /api/v1/projects/{project_id}/versions
 **Description** : Liste des versions d'un projet
 
-**Permissions** : user, premium, admin (propriétaire, collaborateur ou admin)
+**Permissions** : user, premium, admin (propriétaire de la ressource ou admin)
 
 **Réponse** :
 ```json

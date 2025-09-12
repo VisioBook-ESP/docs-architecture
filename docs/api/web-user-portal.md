@@ -902,7 +902,7 @@ Frontend: Page /projects/{id}/duplicate
       "invalidation": ["project_create", "project_update"]
     },
     "project_details": {
-      "ttl": 120,
+      "ttl": 300,
       "strategy": "cache_first",
       "invalidation": ["project_update", "generation_complete"]
     },

@@ -191,12 +191,13 @@ LOG_LEVEL=info
   "email": "user@example.com",
   "role": "user|premium|admin",
   "subscription_type": "free|premium",
-  "permissions": ["domain:action:resource"],
   "iat": 1642234567,
   "exp": 1642320967,
   "jti": "token_unique_id"
 }
 ```
+
+> **📋 Référence** : Voir [Règles Communes](./regles_communes.md) pour la gestion des permissions basées sur les rôles simples.
 
 ### Niveaux de permissions
 - **admin** : Accès complet à tous les fichiers et gestion du stockage
@@ -438,7 +439,7 @@ Content-Length: 1048576
 #### GET /api/v1/storage/files/{file_id}
 **Description** : Détails d'un fichier spécifique
 
-**Permissions** : user, premium, admin (propriétaire ou admin)
+**Permissions** : user, premium, admin (propriétaire de la ressource ou admin)
 
 **Réponse** :
 ```json
@@ -497,7 +498,7 @@ Content-Length: 1048576
 #### PUT /api/v1/storage/files/{file_id}
 **Description** : Mise à jour des métadonnées d'un fichier
 
-**Permissions** : user, premium, admin (propriétaire ou admin)
+**Permissions** : user, premium, admin (propriétaire de la ressource ou admin)
 
 **Requête** :
 ```json
@@ -531,7 +532,7 @@ Content-Length: 1048576
 #### DELETE /api/v1/storage/files/{file_id}
 **Description** : Suppression d'un fichier
 
-**Permissions** : user, premium, admin (propriétaire ou admin)
+**Permissions** : user, premium, admin (propriétaire de la ressource ou admin)
 
 **Paramètres de requête** :
 ```
@@ -555,7 +556,7 @@ Content-Length: 1048576
 #### GET /api/v1/storage/download/{file_id}
 **Description** : Téléchargement direct d'un fichier
 
-**Permissions** : user, premium, admin (propriétaire, public ou admin)
+**Permissions** : user, premium, admin (propriétaire de la ressource ou admin)
 
 **Paramètres de requête** :
 ```
@@ -574,7 +575,7 @@ Content-Disposition: attachment; filename="document.pdf"
 #### GET /api/v1/storage/stream/{file_id}
 **Description** : Streaming d'un fichier média avec support Range
 
-**Permissions** : user, premium, admin (propriétaire, public ou admin)
+**Permissions** : user, premium, admin (propriétaire de la ressource ou admin)
 
 **Headers de requête** :
 ```http

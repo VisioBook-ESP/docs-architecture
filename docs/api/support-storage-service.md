@@ -13,7 +13,7 @@ Le **Support Storage Service** est responsable de la gestion centralisée de tou
 
 ### Informations techniques
 - **Port** : 8089
-- **Technology Stack** : Go + Gin + ImageMagick + FFmpeg
+- **Technology Stack** : Python 3.11 + FastAPI + Pillow + FFmpeg
 - **Storage** : Azure Blob Storage + S3 + CDN
 - **Processing** : Image/Video transformation en temps réel
 - **Version API** : v1
@@ -23,9 +23,9 @@ Le **Support Storage Service** est responsable de la gestion centralisée de tou
 ```mermaid
 graph TB
     subgraph "Support Storage Service"
-        API[API Layer<br/>Go + Gin]
+        API[API Layer<br/>FastAPI + Pydantic]
         UPLOAD[Upload Manager<br/>Multipart + Resumable]
-        TRANSFORM[Media Processor<br/>ImageMagick + FFmpeg]
+        TRANSFORM[Media Processor<br/>Pillow + FFmpeg]
         METADATA[Metadata Manager<br/>EXIF + File Analysis]
         CDN[CDN Manager<br/>Distribution + Cache]
         SECURITY[Security Module<br/>Permissions + Encryption]
@@ -69,13 +69,25 @@ graph TB
 
 ### Schémas de base de données
 
-#### PostgreSQL - Tables de stockage
+#### Note sur l'architecture de données
+
+> **🏗️ Responsabilité de ce service (Phase actuelle)**
+>
+> Le Support Storage Service est **propriétaire** de toutes les données de fichiers, métadonnées, transformations et CDN. Il mocke localement les références aux utilisateurs (user_id) et projets (project_id) nécessaires à son fonctionnement.
+>
+> **🎯 Migration future**
+>
+> Lors de la centralisation via le Core Database Service, ce service fournira les migrations de référence pour toutes les tables liées au stockage et à la gestion des fichiers.
+
+#### PostgreSQL - Tables propriétaires
+
 ```sql
--- Files table
+-- Files table (PROPRIÉTAIRE - Support Storage Service)
+-- Cette table est la source de vérité pour toutes les données de fichiers
 CREATE TABLE files (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    project_id UUID,
+    user_id UUID NOT NULL, -- RÉFÉRENCE MOCKÉE vers Core User Service
+    project_id UUID, -- RÉFÉRENCE MOCKÉE vers Core Project Service
     original_name VARCHAR(255) NOT NULL,
     file_path VARCHAR(500) NOT NULL,
     file_type VARCHAR(100) NOT NULL,
@@ -189,12 +201,28 @@ LOG_LEVEL=info
 
 ## Authentification et sécurité
 
+> **📋 Référence** : Voir [Règles Communes](./regles_communes.md) pour les standards d'authentification, permissions et sécurité.
+
 ### Système JWT
 ```json
 {
   "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "Content-Type": "multipart/form-data",
   "X-Upload-Session": "upload_session_id"
+}
+```
+
+### Structure du JWT Token
+```json
+{
+  "sub": "user_uuid",
+  "email": "user@example.com",
+  "role": "user|premium|admin",
+  "subscription_type": "free|premium",
+  "permissions": ["domain:action:resource"],
+  "iat": 1642234567,
+  "exp": 1642320967,
+  "jti": "token_unique_id"
 }
 ```
 
@@ -206,9 +234,9 @@ LOG_LEVEL=info
 ### Headers de sécurité requis
 ```http
 Authorization: Bearer <jwt_token>
+Content-Type: application/json
 X-Request-ID: <unique_request_id>
 X-Client-Version: <client_version>
-X-File-Checksum: <md5_checksum>
 ```
 
 ## Endpoints API
@@ -953,7 +981,7 @@ flowchart TD
 ```json
 {
   "error": {
-    "code": "FILE_TOO_LARGE",
+    "code": "VISIOBOOK_FILE_TOO_LARGE",
     "message": "File size exceeds maximum allowed limit",
     "details": {
       "file_size_bytes": 104857600,
@@ -961,7 +989,8 @@ flowchart TD
       "user_quota_remaining": 1073741824
     },
     "timestamp": "2024-01-15T10:30:00Z",
-    "request_id": "req_123456789"
+    "request_id": "req_123456789",
+    "service": "support-storage-service"
   }
 }
 ```
@@ -969,14 +998,14 @@ flowchart TD
 ### Codes d'erreur spécifiques
 ```json
 {
-  "INVALID_FILE_TYPE": "File type not allowed for upload",
-  "CHECKSUM_MISMATCH": "File checksum does not match provided value",
-  "QUOTA_EXCEEDED": "User storage quota exceeded",
-  "TRANSFORMATION_FAILED": "File transformation processing failed",
-  "CDN_SYNC_FAILED": "Failed to sync file with CDN",
-  "UPLOAD_SESSION_EXPIRED": "Resumable upload session has expired",
-  "CHUNK_OUT_OF_ORDER": "Upload chunk received out of sequence",
-  "STORAGE_BACKEND_ERROR": "Backend storage service unavailable"
+  "VISIOBOOK_FILE_TYPE_INVALID": "File type not supported",
+  "VISIOBOOK_FILE_TOO_LARGE": "File size exceeds maximum allowed limit",
+  "VISIOBOOK_QUOTA_EXCEEDED": "User storage quota exceeded",
+  "VISIOBOOK_UPLOAD_FAILED": "File upload operation failed",
+  "VISIOBOOK_TRANSFORMATION_FAILED": "File transformation failed",
+  "VISIOBOOK_RESOURCE_NOT_FOUND": "File not found",
+  "VISIOBOOK_INSUFFICIENT_PERMISSIONS": "User lacks required permissions",
+  "VISIOBOOK_SERVICE_UNAVAILABLE": "Backend storage service unavailable"
 }
 ```
 

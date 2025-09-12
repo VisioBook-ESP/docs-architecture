@@ -13,7 +13,7 @@ Le **Core User Service** est responsable de la gestion complète des utilisateur
 
 ### Informations techniques
 - **Port** : 8081
-- **Technology Stack** : Node.js 18 + NestJS + TypeScript + Passport.js
+- **Technology Stack** : Python 3.11 + FastAPI + SQLAlchemy + Pydantic
 - **Authentication** : JWT + OAuth 2.0 + Multi-Factor Authentication
 - **Database** : PostgreSQL + Redis (sessions)
 - **Version API** : v1
@@ -23,9 +23,9 @@ Le **Core User Service** est responsable de la gestion complète des utilisateur
 ```mermaid
 graph TB
     subgraph "Core User Service"
-        API[API Layer<br/>NestJS + TypeScript]
-        AUTH[Authentication Module<br/>Passport.js + JWT]
-        PROFILE[Profile Management<br/>User Data + Preferences]
+        API[API Layer<br/>FastAPI + Pydantic]
+        AUTH[Authentication Module<br/>JWT + OAuth2]
+        PROFILE[Profile Management<br/>SQLAlchemy Models]
         SESSION[Session Manager<br/>Redis Sessions]
         SECURITY[Security Module<br/>MFA + Password Policy]
         NOTIFICATION[Notification Client<br/>Email + SMS]
@@ -61,9 +61,21 @@ graph TB
 
 ### Schémas de base de données
 
-#### PostgreSQL - Tables utilisateurs
+#### Note sur l'architecture de données
+
+> **🏗️ Responsabilité de ce service (Phase actuelle)**
+>
+> Le Core User Service est **propriétaire** de toutes les données utilisateur. Les autres microservices (Project, Storage, AI) mockent localement les données utilisateur nécessaires à leur fonctionnement.
+>
+> **🎯 Migration future**
+>
+> Lors de la centralisation via le Core Database Service, ce service fournira les migrations de référence pour toutes les tables liées aux utilisateurs.
+
+#### PostgreSQL - Tables propriétaires
+
 ```sql
--- Users table (extended)
+-- Users table (PROPRIÉTAIRE - Core User Service)
+-- Cette table est la source de vérité pour toutes les données utilisateur
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -154,8 +166,8 @@ REDIS_URL=redis://localhost:6379
 
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key
-JWT_EXPIRES_IN=24h
-JWT_REFRESH_EXPIRES_IN=7d
+JWT_EXPIRES_IN=86400
+JWT_REFRESH_EXPIRES_IN=604800
 
 # OAuth Providers
 GOOGLE_CLIENT_ID=your-google-client-id
@@ -189,6 +201,8 @@ RATE_LIMIT_MAX=100
 
 ## Authentification et sécurité
 
+> **📋 Référence** : Voir [Règles Communes](./regles_communes.md) pour les standards d'authentification, permissions et sécurité.
+
 ### Système JWT
 ```json
 {
@@ -203,11 +217,12 @@ RATE_LIMIT_MAX=100
 {
   "sub": "user_uuid",
   "email": "user@example.com",
-  "role": "user",
-  "subscription": "premium",
-  "permissions": ["read:projects", "write:projects"],
+  "role": "user|premium|admin",
+  "subscription_type": "free|premium",
+  "permissions": ["domain:action:resource"],
   "iat": 1642234567,
-  "exp": 1642320967
+  "exp": 1642320967,
+  "jti": "token_unique_id"
 }
 ```
 
@@ -219,9 +234,9 @@ RATE_LIMIT_MAX=100
 ### Headers de sécurité requis
 ```http
 Authorization: Bearer <jwt_token>
+Content-Type: application/json
 X-Request-ID: <unique_request_id>
 X-Client-Version: <client_version>
-X-Device-ID: <device_identifier>
 ```
 
 ## Endpoints API
@@ -948,7 +963,7 @@ flowchart TD
 ```json
 {
   "error": {
-    "code": "INVALID_CREDENTIALS",
+    "code": "VISIOBOOK_INVALID_CREDENTIALS",
     "message": "Invalid email or password",
     "details": {
       "field": "password",
@@ -956,7 +971,8 @@ flowchart TD
       "lockout_duration": 900
     },
     "timestamp": "2024-01-15T10:30:00Z",
-    "request_id": "req_123456789"
+    "request_id": "req_123456789",
+    "service": "core-user-service"
   }
 }
 ```
@@ -964,13 +980,14 @@ flowchart TD
 ### Codes d'erreur spécifiques
 ```json
 {
-  "WEAK_PASSWORD": "Password does not meet security requirements",
-  "EMAIL_NOT_VERIFIED": "Email address must be verified",
-  "MFA_REQUIRED": "Multi-factor authentication required",
-  "INVALID_MFA_CODE": "Invalid or expired MFA code",
-  "ACCOUNT_LOCKED": "Account temporarily locked due to failed attempts",
-  "SESSION_EXPIRED": "Session has expired, please login again",
-  "OAUTH_ERROR": "OAuth authentication failed"
+  "VISIOBOOK_INVALID_CREDENTIALS": "Invalid email or password",
+  "VISIOBOOK_TOKEN_EXPIRED": "JWT token has expired",
+  "VISIOBOOK_TOKEN_INVALID": "JWT token is invalid or malformed",
+  "VISIOBOOK_INSUFFICIENT_PERMISSIONS": "User lacks required permissions",
+  "VISIOBOOK_VALIDATION_FAILED": "Input validation failed",
+  "VISIOBOOK_RESOURCE_NOT_FOUND": "User not found",
+  "VISIOBOOK_RESOURCE_CONFLICT": "Email or username already exists",
+  "VISIOBOOK_RATE_LIMIT_EXCEEDED": "Rate limit exceeded for this endpoint"
 }
 ```
 
@@ -982,6 +999,13 @@ flowchart TD
 - **Rétrocompatibilité** : Maintenue pendant 12 mois minimum
 
 ### Stratégie de migration
+1. **Dépréciation** : Annonce 3 mois avant suppression
+2. **Coexistence** : v1 et v2 fonctionnent en parallèle pendant 6 mois
+3. **Migration automatique** : Scripts de migration des données
+4. **Documentation** : Guide de migration détaillé
+5. **Support** : Assistance technique pendant la transition
+
+### Processus de migration spécifique
 1. **Authentification** : Migration transparente des tokens
 2. **Profils utilisateur** : Migration automatique des données
 3. **Sessions** : Renouvellement automatique lors de la connexion

@@ -3,7 +3,7 @@
 ## Vue d'ensemble du service
 
 ### Rôle et responsabilités
-Le **Core Project Service** est responsable de la gestion complète des projets utilisateur, incluant la création, l'édition, le versioning, la collaboration et l'orchestration des workflows de génération. Il constitue le cœur de la logique métier de Visiobook.
+Le **Core Project Service** est responsable de la gestion complète des projets utilisateur, incluant la création, l'édition, le versioning et l'orchestration des workflows de génération. Il constitue le cœur de la logique métier de Visiobook.
 
 ### Justification de l'atomisation
 - **Logique métier centralisée** : Gestion complexe des états et workflows de projets
@@ -26,7 +26,6 @@ graph TB
         API[API Layer<br/>NestJS + TypeScript]
         PROJECT[Project Manager<br/>CRUD + Lifecycle]
         WORKFLOW[Workflow Engine<br/>State Machines]
-        COLLAB[Collaboration Module<br/>Real-time + Permissions]
         VERSION[Version Control<br/>Git-like Versioning]
         QUEUE[Job Queue<br/>Bull + Redis]
     end
@@ -42,14 +41,12 @@ graph TB
 
     API --> PROJECT
     API --> WORKFLOW
-    API --> COLLAB
     API --> VERSION
     PROJECT --> QUEUE
     WORKFLOW --> QUEUE
 
     PROJECT --> DB
     PROJECT --> MONGO
-    COLLAB --> REDIS
     VERSION --> DB
     QUEUE --> REDIS
 
@@ -61,25 +58,37 @@ graph TB
     classDef external fill:#fff8e1,stroke:#f9a825,stroke-width:2px
     classDef database fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
 
-    class API,PROJECT,WORKFLOW,COLLAB,VERSION,QUEUE service
+    class API,PROJECT,WORKFLOW,VERSION,QUEUE service
     class USER_SVC,STORAGE_SVC,AI_SVC external
     class DB,MONGO,REDIS database
 ```
 
 ### Schémas de base de données
 
-#### PostgreSQL - Tables principales
+#### Note sur l'architecture de données
+
+> **🏗️ Responsabilité de ce service (Phase actuelle)**
+>
+> Le Core Project Service est **propriétaire** de toutes les données de projets, workflows et versions. Il mocke localement les données utilisateur (user_id) nécessaires à son fonctionnement, en attendant la centralisation.
+>
+> **🎯 Migration future**
+>
+> Lors de la centralisation via le Core Database Service, ce service fournira les migrations de référence pour toutes les tables liées aux projets et workflows.
+
+#### PostgreSQL - Tables propriétaires
+
 ```sql
--- Projects table
+-- Projects table (PROPRIÉTAIRE - Core Project Service)
+-- Cette table est la source de vérité pour toutes les données de projets
 CREATE TABLE projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
+    user_id UUID NOT NULL, -- RÉFÉRENCE MOCKÉE vers Core User Service
     title VARCHAR(255) NOT NULL,
     description TEXT,
     status VARCHAR(50) DEFAULT 'draft',
     visibility VARCHAR(50) DEFAULT 'private',
-    source_content_id UUID,
-    generated_content_id UUID,
+    source_content_id UUID, -- RÉFÉRENCE MOCKÉE vers Support Storage Service
+    generated_content_id UUID, -- RÉFÉRENCE MOCKÉE vers Support Storage Service
     settings JSONB DEFAULT '{}',
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP DEFAULT NOW(),
@@ -108,22 +117,6 @@ CREATE TABLE project_versions (
 CREATE INDEX idx_project_versions_project_id ON project_versions(project_id);
 CREATE INDEX idx_project_versions_number ON project_versions(project_id, version_number);
 
--- Project collaborators table
-CREATE TABLE project_collaborators (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL,
-    role VARCHAR(50) NOT NULL,
-    permissions JSONB DEFAULT '{}',
-    invited_by UUID NOT NULL,
-    invited_at TIMESTAMP DEFAULT NOW(),
-    accepted_at TIMESTAMP,
-    status VARCHAR(50) DEFAULT 'pending'
-);
-
-CREATE INDEX idx_project_collaborators_project_id ON project_collaborators(project_id);
-CREATE INDEX idx_project_collaborators_user_id ON project_collaborators(user_id);
-CREATE INDEX idx_project_collaborators_status ON project_collaborators(status);
 
 -- Project workflows table
 CREATE TABLE project_workflows (
@@ -144,22 +137,6 @@ CREATE INDEX idx_project_workflows_project_id ON project_workflows(project_id);
 CREATE INDEX idx_project_workflows_status ON project_workflows(status);
 CREATE INDEX idx_project_workflows_type ON project_workflows(workflow_type);
 
--- Project comments table
-CREATE TABLE project_comments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL,
-    parent_comment_id UUID REFERENCES project_comments(id),
-    content TEXT NOT NULL,
-    metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    deleted_at TIMESTAMP
-);
-
-CREATE INDEX idx_project_comments_project_id ON project_comments(project_id);
-CREATE INDEX idx_project_comments_user_id ON project_comments(user_id);
-CREATE INDEX idx_project_comments_parent ON project_comments(parent_comment_id);
 ```
 
 #### MongoDB - Collections de contenu
@@ -219,12 +196,8 @@ QUEUE_RETRY_DELAY=5000
 # Workflow settings
 MAX_WORKFLOW_DURATION=3600
 WORKFLOW_CLEANUP_INTERVAL=86400
-AUTO_SAVE_INTERVAL=30
+AUTO_SAVE_INTERVAL=30000
 
-# Collaboration
-REALTIME_ENABLED=true
-MAX_COLLABORATORS=10
-COMMENT_MAX_LENGTH=1000
 
 # Security
 JWT_SECRET=your-jwt-secret
@@ -237,6 +210,8 @@ LOG_LEVEL=info
 
 ## Authentification et sécurité
 
+> **📋 Référence** : Voir [Règles Communes](./regles_communes.md) pour les standards d'authentification, permissions et sécurité.
+
 ### Système JWT
 ```json
 {
@@ -246,23 +221,31 @@ LOG_LEVEL=info
 }
 ```
 
+### Structure du JWT Token
+```json
+{
+  "sub": "user_uuid",
+  "email": "user@example.com",
+  "role": "user|premium|admin",
+  "subscription_type": "free|premium",
+  "permissions": ["domain:action:resource"],
+  "iat": 1642234567,
+  "exp": 1642320967,
+  "jti": "token_unique_id"
+}
+```
+
 ### Niveaux de permissions
 - **admin** : Accès complet à tous les projets et gestion système
-- **user** : Accès aux projets personnels et projets partagés selon permissions
+- **user** : Accès aux projets personnels uniquement
 - **premium** : Fonctionnalités avancées et quotas étendus
-
-### Permissions de collaboration
-- **owner** : Contrôle total du projet
-- **editor** : Modification du contenu et des paramètres
-- **viewer** : Lecture seule et commentaires
-- **commenter** : Ajout de commentaires uniquement
 
 ### Headers de sécurité requis
 ```http
 Authorization: Bearer <jwt_token>
+Content-Type: application/json
 X-Request-ID: <unique_request_id>
 X-Client-Version: <client_version>
-X-Project-Lock: <lock_token>
 ```
 
 ## Endpoints API
@@ -322,7 +305,6 @@ X-Project-Lock: <lock_token>
 &sort=updated_at
 &order=desc
 &search=mon projet
-&collaborator=user_id
 ```
 
 **Réponse** :
@@ -340,18 +322,11 @@ X-Project-Lock: <lock_token>
         "progress_percent": 65,
         "estimated_completion": "2024-01-15T12:00:00Z"
       },
-      "collaborators_count": 3,
       "created_at": "2024-01-10T10:30:00Z",
       "updated_at": "2024-01-15T10:30:00Z",
-      "owner": {
-        "id": "user_123456789",
-        "username": "johndoe",
-        "avatar_url": "https://cdn.visiobook.com/avatars/user_123.jpg"
-      },
       "stats": {
         "views": 45,
-        "generations": 3,
-        "comments": 8
+        "generations": 3
       }
     }
   ],
@@ -395,12 +370,6 @@ X-Project-Lock: <lock_token>
     "voice_language": "fr",
     "auto_generate": true
   },
-  "collaborators": [
-    {
-      "user_id": "user_987654321",
-      "role": "editor"
-    }
-  ]
 }
 ```
 
@@ -427,21 +396,14 @@ X-Project-Lock: <lock_token>
     "id": "workflow_456789",
     "status": "queued",
     "next_step": "content_analysis"
-  },
-  "collaborators": [
-    {
-      "user_id": "user_987654321",
-      "role": "editor",
-      "status": "pending"
-    }
-  ]
+  }
 }
 ```
 
 #### GET /api/v1/projects/{project_id}
 **Description** : Détails complets d'un projet
 
-**Permissions** : user, premium, admin (propriétaire, collaborateur ou admin)
+**Permissions** : user, premium, admin (propriétaire ou admin)
 
 **Réponse** :
 ```json
@@ -515,16 +477,6 @@ X-Project-Lock: <lock_token>
     ],
     "completed_at": "2024-01-15T10:30:00Z"
   },
-  "collaborators": [
-    {
-      "user_id": "user_987654321",
-      "username": "janedoe",
-      "role": "editor",
-      "permissions": ["read", "write", "comment"],
-      "status": "accepted",
-      "last_activity": "2024-01-15T09:45:00Z"
-    }
-  ],
   "versions": {
     "current": 3,
     "total": 5,
@@ -532,9 +484,7 @@ X-Project-Lock: <lock_token>
   },
   "stats": {
     "views": 45,
-    "generations": 3,
-    "comments": 8,
-    "shares": 2
+    "generations": 3
   }
 }
 ```
@@ -613,7 +563,7 @@ X-Project-Lock: <lock_token>
 #### GET /api/v1/projects/{project_id}/content
 **Description** : Récupération du contenu d'un projet
 
-**Permissions** : user, premium, admin (propriétaire, collaborateur ou admin)
+**Permissions** : user, premium, admin (propriétaire ou admin)
 
 **Paramètres de requête** :
 ```
@@ -897,222 +847,6 @@ X-Project-Lock: <lock_token>
 }
 ```
 
-### Collaboration
-
-#### GET /api/v1/projects/{project_id}/collaborators
-**Description** : Liste des collaborateurs d'un projet
-
-**Permissions** : user, premium, admin (propriétaire, collaborateur ou admin)
-
-**Réponse** :
-```json
-{
-  "collaborators": [
-    {
-      "user_id": "user_123456789",
-      "username": "johndoe",
-      "email": "john@example.com",
-      "role": "owner",
-      "permissions": ["read", "write", "delete", "manage_collaborators"],
-      "status": "active",
-      "joined_at": "2024-01-10T10:30:00Z",
-      "last_activity": "2024-01-15T10:30:00Z",
-      "avatar_url": "https://cdn.visiobook.com/avatars/user_123.jpg"
-    },
-    {
-      "user_id": "user_987654321",
-      "username": "janedoe",
-      "email": "jane@example.com",
-      "role": "editor",
-      "permissions": ["read", "write", "comment"],
-      "status": "accepted",
-      "invited_by": "user_123456789",
-      "invited_at": "2024-01-12T14:20:00Z",
-      "accepted_at": "2024-01-12T15:30:00Z",
-      "last_activity": "2024-01-15T09:45:00Z"
-    }
-  ],
-  "pending_invitations": [
-    {
-      "email": "bob@example.com",
-      "role": "viewer",
-      "invited_by": "user_123456789",
-      "invited_at": "2024-01-14T16:00:00Z",
-      "expires_at": "2024-01-21T16:00:00Z"
-    }
-  ],
-  "collaboration_settings": {
-    "max_collaborators": 10,
-    "allow_public_comments": false,
-    "require_approval": true
-  }
-}
-```
-
-#### POST /api/v1/projects/{project_id}/collaborators
-**Description** : Invitation d'un collaborateur
-
-**Permissions** : user, premium, admin (propriétaire ou admin)
-
-**Requête** :
-```json
-{
-  "email": "newuser@example.com",
-  "role": "editor",
-  "permissions": ["read", "write", "comment"],
-  "message": "J'aimerais que tu m'aides sur ce projet"
-}
-```
-
-**Réponse** :
-```json
-{
-  "invitation": {
-    "id": "invite_123456789",
-    "email": "newuser@example.com",
-    "role": "editor",
-    "permissions": ["read", "write", "comment"],
-    "invited_by": "user_123456789",
-    "invited_at": "2024-01-15T10:30:00Z",
-    "expires_at": "2024-01-22T10:30:00Z",
-    "status": "sent"
-  },
-  "notification_sent": true,
-  "message": "Invitation sent successfully"
-}
-```
-
-#### PUT /api/v1/projects/{project_id}/collaborators/{user_id}
-**Description** : Modification du rôle d'un collaborateur
-
-**Permissions** : user, premium, admin (propriétaire ou admin)
-
-**Requête** :
-```json
-{
-  "role": "viewer",
-  "permissions": ["read", "comment"]
-}
-```
-
-**Réponse** :
-```json
-{
-  "collaborator": {
-    "user_id": "user_987654321",
-    "role": "viewer",
-    "permissions": ["read", "comment"],
-    "updated_at": "2024-01-15T11:30:00Z"
-  },
-  "message": "Collaborator role updated successfully"
-}
-```
-
-#### DELETE /api/v1/projects/{project_id}/collaborators/{user_id}
-**Description** : Suppression d'un collaborateur
-
-**Permissions** : user, premium, admin (propriétaire ou admin)
-
-**Réponse** :
-```json
-{
-  "removed": true,
-  "user_id": "user_987654321",
-  "message": "Collaborator removed from project"
-}
-```
-
-### Comments
-
-#### GET /api/v1/projects/{project_id}/comments
-**Description** : Liste des commentaires d'un projet
-
-**Permissions** : user, premium, admin (propriétaire, collaborateur ou admin)
-
-**Paramètres de requête** :
-```
-?page=1
-&limit=20
-&sort=created_at
-&order=desc
-&thread=comment_id
-```
-
-**Réponse** :
-```json
-{
-  "comments": [
-    {
-      "id": "comment_123456789",
-      "user_id": "user_987654321",
-      "username": "janedoe",
-      "avatar_url": "https://cdn.visiobook.com/avatars/user_987.jpg",
-      "content": "J'adore cette scène ! Peut-être ajouter plus de détails sur le paysage ?",
-      "parent_comment_id": null,
-      "replies_count": 2,
-      "metadata": {
-        "scene_id": "scene_1",
-        "timestamp": "00:02:15"
-      },
-      "created_at": "2024-01-15T10:30:00Z",
-      "updated_at": "2024-01-15T10:30:00Z"
-    },
-    {
-      "id": "comment_987654321",
-      "user_id": "user_123456789",
-      "username": "johndoe",
-      "avatar_url": "https://cdn.visiobook.com/avatars/user_123.jpg",
-      "content": "Bonne idée ! Je vais ajouter une description du coucher de soleil.",
-      "parent_comment_id": "comment_123456789",
-      "replies_count": 0,
-      "metadata": {},
-      "created_at": "2024-01-15T10:45:00Z",
-      "updated_at": "2024-01-15T10:45:00Z"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 45,
-    "pages": 3
-  }
-}
-```
-
-#### POST /api/v1/projects/{project_id}/comments
-**Description** : Ajout d'un commentaire
-
-**Permissions** : user, premium, admin (propriétaire, collaborateur ou admin)
-
-**Requête** :
-```json
-{
-  "content": "Excellente progression dans cette scène !",
-  "parent_comment_id": null,
-  "metadata": {
-    "scene_id": "scene_2",
-    "timestamp": "00:05:30"
-  }
-}
-```
-
-**Réponse** :
-```json
-{
-  "comment": {
-    "id": "comment_new123",
-    "user_id": "user_123456789",
-    "content": "Excellente progression dans cette scène !",
-    "parent_comment_id": null,
-    "metadata": {
-      "scene_id": "scene_2",
-      "timestamp": "00:05:30"
-    },
-    "created_at": "2024-01-15T11:30:00Z"
-  },
-  "notifications_sent": 2
-}
-```
 
 ### Version Control
 
@@ -1214,24 +948,23 @@ sequenceDiagram
     API-->>Client: Return project + workflow info
 ```
 
-### Diagramme de séquence - Collaboration en temps réel
+### Diagramme de séquence - Mise à jour de projet
 
 ```mermaid
 sequenceDiagram
-    participant User1 as User 1
-    participant User2 as User 2
+    participant User as User
     participant API as Project API
     participant Redis as Redis Cache
-    participant WebSocket as WebSocket Server
+    participant Queue as Job Queue
+    participant AISvc as AI Service
 
-    User1->>API: PUT /api/v1/projects/{id}/content
+    User->>API: PUT /api/v1/projects/{id}/content
     API->>Redis: Update project cache
-    API->>WebSocket: Broadcast content change
-    WebSocket->>User2: Real-time update notification
-    User2->>API: GET /api/v1/projects/{id}/content
-    API->>Redis: Get latest content
-    Redis-->>API: Return cached content
-    API-->>User2: Return updated content
+    API->>Queue: Queue regeneration workflow
+    Queue-->>API: Workflow queued
+    API->>AISvc: Start content reanalysis
+    AISvc-->>API: Analysis started
+    API-->>User: Return updated project + workflow
 ```
 
 ### Diagramme de flux - Workflow de génération
@@ -1253,8 +986,7 @@ flowchart TD
     SynthesizeAudio --> AssembleVideo[Assemble Final Video]
 
     AssembleVideo --> UpdateProject[Update Project Status]
-    UpdateProject --> NotifyUsers[Notify Collaborators]
-    NotifyUsers --> Success[Generation Complete]
+    UpdateProject --> Success[Generation Complete]
 
     ContentError --> End([End])
     AnalysisError --> End
@@ -1392,7 +1124,7 @@ flowchart TD
 | 401 | Unauthorized | Token JWT manquant ou invalide |
 | 403 | Forbidden | Permissions insuffisantes sur le projet |
 | 404 | Not Found | Projet non trouvé |
-| 409 | Conflict | Conflit de version ou de collaboration |
+| 409 | Conflict | Conflit de version |
 | 422 | Unprocessable Entity | Contenu invalide ou workflow impossible |
 | 423 | Locked | Projet verrouillé par un autre utilisateur |
 | 429 | Too Many Requests | Limite de projets ou workflows dépassée |
@@ -1403,7 +1135,7 @@ flowchart TD
 ```json
 {
   "error": {
-    "code": "PROJECT_QUOTA_EXCEEDED",
+    "code": "VISIOBOOK_QUOTA_EXCEEDED",
     "message": "Maximum number of projects reached for user subscription",
     "details": {
       "current_projects": 25,
@@ -1411,7 +1143,8 @@ flowchart TD
       "subscription_type": "premium"
     },
     "timestamp": "2024-01-15T10:30:00Z",
-    "request_id": "req_123456789"
+    "request_id": "req_123456789",
+    "service": "core-project-service"
   }
 }
 ```
@@ -1419,14 +1152,14 @@ flowchart TD
 ### Codes d'erreur spécifiques
 ```json
 {
-  "INVALID_CONTENT": "Project content is invalid or corrupted",
-  "WORKFLOW_FAILED": "Project generation workflow failed",
-  "COLLABORATION_LIMIT": "Maximum number of collaborators reached",
-  "VERSION_CONFLICT": "Version conflict detected during update",
-  "CONTENT_TOO_LARGE": "Project content exceeds maximum size limit",
-  "INSUFFICIENT_CREDITS": "Not enough credits to complete operation",
-  "PROJECT_LOCKED": "Project is currently being edited by another user",
-  "INVALID_WORKFLOW": "Requested workflow type is not supported"
+  "VISIOBOOK_VALIDATION_FAILED": "Project content is invalid or corrupted",
+  "VISIOBOOK_AI_PROCESSING_FAILED": "Project generation workflow failed",
+  "VISIOBOOK_RESOURCE_CONFLICT": "Version conflict detected during update",
+  "VISIOBOOK_FILE_TOO_LARGE": "Project content exceeds maximum size limit",
+  "VISIOBOOK_QUOTA_EXCEEDED": "Not enough credits to complete operation",
+  "VISIOBOOK_RESOURCE_NOT_FOUND": "Project not found",
+  "VISIOBOOK_INSUFFICIENT_PERMISSIONS": "User lacks required permissions",
+  "VISIOBOOK_RATE_LIMIT_EXCEEDED": "Rate limit exceeded for this endpoint"
 }
 ```
 
@@ -1438,6 +1171,13 @@ flowchart TD
 - **Rétrocompatibilité** : Maintenue pendant 12 mois minimum
 
 ### Stratégie de migration
+1. **Dépréciation** : Annonce 3 mois avant suppression
+2. **Coexistence** : v1 et v2 fonctionnent en parallèle pendant 6 mois
+3. **Migration automatique** : Scripts de migration des données
+4. **Documentation** : Guide de migration détaillé
+5. **Support** : Assistance technique pendant la transition
+
+### Processus de migration spécifique
 1. **Projets existants** : Migration transparente des données
 2. **Workflows** : Conversion automatique vers nouveaux types
 3. **Collaborations** : Préservation des permissions existantes

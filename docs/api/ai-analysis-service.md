@@ -81,12 +81,24 @@ graph TB
 
 ### Schémas de base de données
 
-#### PostgreSQL - Tables d'analyse
+#### Note sur l'architecture de données
+
+> **🏗️ Responsabilité de ce service (Phase actuelle)**
+>
+> L'AI Analysis Service est **propriétaire** de toutes les données d'analyse IA, jobs de traitement, résultats d'analyse et métriques de performance des modèles. Il mocke localement les références aux projets (project_id) nécessaires à son fonctionnement.
+>
+> **🎯 Migration future**
+>
+> Lors de la centralisation via le Core Database Service, ce service fournira les migrations de référence pour toutes les tables liées à l'intelligence artificielle et au traitement de contenu.
+
+#### PostgreSQL - Tables propriétaires
+
 ```sql
--- Analysis jobs table
+-- Analysis jobs table (PROPRIÉTAIRE - AI Analysis Service)
+-- Cette table est la source de vérité pour tous les jobs d'analyse IA
 CREATE TABLE analysis_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID NOT NULL,
+    project_id UUID NOT NULL, -- RÉFÉRENCE MOCKÉE vers Core Project Service
     job_type VARCHAR(100) NOT NULL,
     status VARCHAR(50) DEFAULT 'pending',
     priority INTEGER DEFAULT 5,
@@ -204,7 +216,7 @@ CELERY_WORKERS=4
 CELERY_CONCURRENCY=2
 
 # Performance
-MAX_CONTENT_LENGTH=50MB
+MAX_CONTENT_LENGTH=52428800
 MAX_PROCESSING_TIME=3600
 TIMEOUT_SEMANTIC_ANALYSIS=300
 TIMEOUT_IMAGE_GENERATION=600
@@ -217,12 +229,28 @@ ENABLE_PROFILING=true
 
 ## Authentification et sécurité
 
+> **📋 Référence** : Voir [Règles Communes](./regles_communes.md) pour les standards d'authentification, permissions et sécurité.
+
 ### Système JWT
 ```json
 {
   "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "Content-Type": "application/json",
   "X-GPU-Priority": "high"
+}
+```
+
+### Structure du JWT Token
+```json
+{
+  "sub": "user_uuid",
+  "email": "user@example.com",
+  "role": "user|premium|admin",
+  "subscription_type": "free|premium",
+  "permissions": ["domain:action:resource"],
+  "iat": 1642234567,
+  "exp": 1642320967,
+  "jti": "token_unique_id"
 }
 ```
 
@@ -1188,14 +1216,14 @@ flowchart TD
 ### Codes d'erreur spécifiques
 ```json
 {
-  "CONTENT_TOO_COMPLEX": "Content complexity exceeds model capabilities",
-  "MODEL_NOT_LOADED": "Required AI model is not currently loaded",
-  "GPU_TIMEOUT": "GPU processing timeout exceeded",
-  "INVALID_LANGUAGE": "Language not supported by the model",
-  "GENERATION_FAILED": "AI generation failed due to content constraints",
-  "QUEUE_FULL": "Processing queue is at maximum capacity",
-  "INSUFFICIENT_CREDITS": "Not enough AI processing credits",
-  "MODEL_VERSION_MISMATCH": "Content requires different model version"
+  "VISIOBOOK_AI_PROCESSING_FAILED": "AI processing operation failed",
+  "VISIOBOOK_GPU_UNAVAILABLE": "GPU resources temporarily unavailable",
+  "VISIOBOOK_VALIDATION_FAILED": "Content validation failed",
+  "VISIOBOOK_QUOTA_EXCEEDED": "AI processing quota exceeded",
+  "VISIOBOOK_RESOURCE_NOT_FOUND": "Analysis job not found",
+  "VISIOBOOK_INSUFFICIENT_PERMISSIONS": "User lacks required permissions",
+  "VISIOBOOK_SERVICE_UNAVAILABLE": "AI service temporarily unavailable",
+  "VISIOBOOK_RATE_LIMIT_EXCEEDED": "Rate limit exceeded for this endpoint"
 }
 ```
 

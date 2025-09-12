@@ -12,9 +12,9 @@ Le **Core Database Service** est le service fondamental qui gère toutes les con
 - **Maintenance** : Migrations et sauvegardes centralisées
 
 ### Informations techniques
-- **Port** : 8095
-- **Technology Stack** : Node.js 18 + TypeScript + Prisma + TypeORM
-- **Databases** : PostgreSQL, Redis, CosmosDB, Vector DB
+- **Port** : 8084
+- **Technology Stack** : NestJS + TypeScript + Prisma
+- **Databases** : PostgreSQL, Redis
 - **Version API** : v1
 
 ## Architecture du service
@@ -22,25 +22,23 @@ Le **Core Database Service** est le service fondamental qui gère toutes les con
 ```mermaid
 graph TB
     subgraph "Core Database Service"
-        API[API Layer<br/>Express + TypeScript]
-        POOL[Connection Pool Manager<br/>pg-pool + ioredis]
+        API[API Layer<br/>NestJS + TypeScript]
+        POOL[Connection Pool Manager<br/>Prisma + ioredis]
         CACHE[Cache Layer<br/>Redis Cluster]
-        MIGRATE[Migration Manager<br/>Prisma + TypeORM]
+        MIGRATE[Migration Manager<br/>Prisma Migrate]
         BACKUP[Backup Manager<br/>Automated Backups]
+        GUARD[Auth Guard<br/>JWT Validation]
     end
 
     subgraph "Databases"
         PG[(PostgreSQL<br/>Primary Data)]
         REDIS[(Redis<br/>Cache + Sessions)]
-        COSMOS[(CosmosDB<br/>NoSQL Data)]
-        VECTOR[(Vector DB<br/>AI Embeddings)]
     end
 
+    API --> GUARD
     API --> POOL
     POOL --> PG
     POOL --> REDIS
-    POOL --> COSMOS
-    POOL --> VECTOR
     API --> CACHE
     API --> MIGRATE
     API --> BACKUP
@@ -48,66 +46,146 @@ graph TB
     classDef service fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef database fill:#fff8e1,stroke:#f9a825,stroke-width:2px
 
-    class API,POOL,CACHE,MIGRATE,BACKUP service
-    class PG,REDIS,COSMOS,VECTOR database
+    class API,POOL,CACHE,MIGRATE,BACKUP,GUARD service
+    class PG,REDIS database
 ```
 
-### Schémas de base de données
+### Architecture de Données - Stratégie de Migration
 
-#### PostgreSQL - Tables principales
+#### Note sur l'approche architecturale actuelle
+
+> **🏗️ Phase de développement décentralisé (Actuelle)**
+>
+> Pour faciliter le développement parallèle des microservices, chaque service gère actuellement ses propres tables pour les objets dont il est responsable. Les objets provenant d'autres services sont "mockés" localement dans chaque base de données.
+>
+> **🎯 Phase de centralisation future (Roadmap)**
+>
+> Le Core Database Service récupérera progressivement les fichiers de migration de tous les microservices et centralisera l'accès aux données via des contrats d'interface standardisés.
+
+#### Schémas de Référence Centralisés (Future)
+
+Les schémas ci-dessous représentent la structure de données unifiée qui sera mise en place lors de la centralisation :
+
 ```sql
--- Users table
+-- Unified Users table (source: Core User Service)
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
+    username VARCHAR(100) UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
     role VARCHAR(50) DEFAULT 'user',
+    subscription_type VARCHAR(50) DEFAULT 'free',
+    email_verified BOOLEAN DEFAULT FALSE,
+    phone_verified BOOLEAN DEFAULT FALSE,
+    mfa_enabled BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMP DEFAULT NOW(),
+    deleted_at TIMESTAMP
 );
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_role ON users(role);
 
--- Projects table
+-- Unified Projects table (source: Core Project Service)
 CREATE TABLE projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     description TEXT,
     status VARCHAR(50) DEFAULT 'draft',
-    content_path VARCHAR(500),
+    visibility VARCHAR(50) DEFAULT 'private',
+    source_content_id UUID,
+    generated_content_id UUID,
+    settings JSONB DEFAULT '{}',
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    deleted_at TIMESTAMP
+);
+
+-- Unified Files table (source: Support Storage Service)
+CREATE TABLE files (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id),
+    project_id UUID REFERENCES projects(id),
+    original_name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    file_type VARCHAR(100) NOT NULL,
+    mime_type VARCHAR(100) NOT NULL,
+    size_bytes BIGINT NOT NULL,
+    checksum_md5 VARCHAR(32) NOT NULL,
+    storage_provider VARCHAR(50) DEFAULT 'azure_blob',
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
-CREATE INDEX idx_projects_user_id ON projects(user_id);
-CREATE INDEX idx_projects_status ON projects(status);
-CREATE INDEX idx_projects_created_at ON projects(created_at);
 
--- Content analysis table
-CREATE TABLE content_analysis (
+-- Unified Analysis Jobs table (source: AI Analysis Service)
+CREATE TABLE analysis_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
-    analysis_type VARCHAR(100) NOT NULL,
-    result JSONB NOT NULL,
-    confidence_score DECIMAL(3,2),
-    created_at TIMESTAMP DEFAULT NOW()
+    project_id UUID REFERENCES projects(id),
+    job_type VARCHAR(100) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    parameters JSONB NOT NULL,
+    result JSONB,
+    created_at TIMESTAMP DEFAULT NOW(),
+    completed_at TIMESTAMP
 );
-CREATE INDEX idx_content_analysis_project_id ON content_analysis(project_id);
-CREATE INDEX idx_content_analysis_type ON content_analysis(analysis_type);
-CREATE INDEX idx_content_analysis_confidence ON content_analysis(confidence_score);
+```
 
--- Media assets table
-CREATE TABLE media_assets (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
-    asset_type VARCHAR(50) NOT NULL,
-    file_path VARCHAR(500) NOT NULL,
-    metadata JSONB,
-    size_bytes BIGINT,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-CREATE INDEX idx_media_assets_project_id ON media_assets(project_id);
-CREATE INDEX idx_media_assets_type ON media_assets(asset_type);
+#### Stratégie de Migration des Microservices
+
+##### Phase 1 - Collecte des Migrations (En cours)
+1. **Récupération automatique** des fichiers de migration de chaque service
+2. **Analyse des schémas** pour identifier les dépendances et conflits
+3. **Mapping des objets** entre services (utilisateurs, projets, fichiers, etc.)
+4. **Validation des contrats** d'interface proposés
+
+##### Phase 2 - Implémentation des Contrats (Future)
+1. **Déploiement des contrats** d'interface standardisés
+2. **Migration progressive** service par service
+3. **Tests de compatibilité** et validation des données
+4. **Monitoring** des performances et de la fiabilité
+
+##### Phase 3 - Centralisation Complète (Future)
+1. **Décommissionnement** des bases de données locales
+2. **Optimisation** des requêtes centralisées
+3. **Mise en place** de la haute disponibilité
+4. **Documentation** finale et formation des équipes
+
+#### Processus de Récupération des Migrations
+
+```bash
+# Script de collecte automatique des migrations
+#!/bin/bash
+
+# Collecte depuis chaque microservice
+collect_migrations() {
+    services=("core-user-service" "core-project-service" "support-storage-service" "ai-analysis-service")
+
+    for service in "${services[@]}"; do
+        echo "Collecting migrations from $service..."
+
+        # Récupération des fichiers de migration
+        rsync -av $service/migrations/ ./collected-migrations/$service/
+
+        # Analyse des dépendances
+        python analyze_dependencies.py ./collected-migrations/$service/
+
+        # Génération des contrats d'interface
+        python generate_contracts.py $service
+    done
+}
+
+# Validation des contrats
+validate_contracts() {
+    echo "Validating interface contracts..."
+    python validate_contracts.py ./contracts/
+}
+
+# Génération du schéma unifié
+generate_unified_schema() {
+    echo "Generating unified database schema..."
+    python merge_schemas.py ./collected-migrations/ > unified_schema.sql
+}
 ```
 
 ### Variables d'environnement
@@ -116,14 +194,16 @@ CREATE INDEX idx_media_assets_type ON media_assets(asset_type);
 # Database connections
 DATABASE_URL=postgresql://user:password@localhost:5432/visiobook
 REDIS_URL=redis://localhost:6379
-COSMOS_CONNECTION_STRING=AccountEndpoint=https://...
-VECTOR_DB_URL=https://your-vector-db.com
 
 # Connection pools
 DB_POOL_MIN=5
 DB_POOL_MAX=20
 DB_POOL_IDLE_TIMEOUT=30000
 REDIS_POOL_SIZE=10
+
+# NestJS Configuration
+NODE_ENV=production
+PORT=8084
 
 # Security
 DB_ENCRYPTION_KEY=your-encryption-key
@@ -132,15 +212,34 @@ JWT_SECRET=your-jwt-secret
 # Monitoring
 PROMETHEUS_PORT=9090
 LOG_LEVEL=info
+
+# Prisma
+PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK=1
 ```
 
 ## Authentification et sécurité
+
+> **📋 Référence** : Voir [Règles Communes](./regles_communes.md) pour les standards d'authentification, permissions et sécurité.
 
 ### Système JWT
 ```json
 {
   "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "Content-Type": "application/json"
+}
+```
+
+### Structure du JWT Token
+```json
+{
+  "sub": "user_uuid",
+  "email": "user@example.com",
+  "role": "user|premium|admin",
+  "subscription_type": "free|premium",
+  "permissions": ["domain:action:resource"],
+  "iat": 1642234567,
+  "exp": 1642320967,
+  "jti": "token_unique_id"
 }
 ```
 
@@ -187,9 +286,10 @@ X-Client-Version: <client_version>
       "responseTime": "2ms",
       "memory": "45MB"
     },
-    "cosmosdb": {
+    "prisma": {
       "status": "UP",
-      "responseTime": "25ms"
+      "responseTime": "8ms",
+      "migrations": "up_to_date"
     }
   }
 }
@@ -535,7 +635,7 @@ flowchart TD
 ```json
 {
   "error": {
-    "code": "DATABASE_CONNECTION_FAILED",
+    "code": "VISIOBOOK_SERVICE_UNAVAILABLE",
     "message": "Unable to acquire database connection",
     "details": {
       "database": "postgresql",
@@ -543,8 +643,241 @@ flowchart TD
       "retry_after": 30
     },
     "timestamp": "2024-01-15T10:30:00Z",
-    "request_id": "req_123456789"
+    "request_id": "req_123456789",
+    "service": "core-database-service"
   }
+}
+```
+
+## Contrats d'Interface
+
+### Vue d'ensemble
+Le Core Database Service prépare la centralisation progressive des données des microservices. Les contrats d'interface suivants définissent les APIs futures qui permettront aux autres services de migrer vers une architecture centralisée.
+
+### Interface User Contract
+```typescript
+interface UserContract {
+  // Données de base
+  getUserById(id: string): Promise<User>;
+  getUserByEmail(email: string): Promise<User>;
+  createUser(userData: CreateUserData): Promise<User>;
+  updateUser(id: string, userData: UpdateUserData): Promise<User>;
+  deleteUser(id: string): Promise<boolean>;
+
+  // Authentification
+  validateCredentials(email: string, password: string): Promise<AuthResult>;
+  createSession(userId: string, deviceInfo: DeviceInfo): Promise<Session>;
+  validateSession(sessionToken: string): Promise<Session>;
+  refreshSession(refreshToken: string): Promise<Session>;
+
+  // Permissions et rôles
+  getUserPermissions(userId: string): Promise<Permission[]>;
+  hasPermission(userId: string, permission: string): Promise<boolean>;
+  updateUserRole(userId: string, role: string): Promise<boolean>;
+
+  // Profils utilisateur
+  getUserProfile(userId: string): Promise<UserProfile>;
+  updateUserProfile(userId: string, profileData: UpdateProfileData): Promise<UserProfile>;
+}
+
+interface User {
+  id: string;
+  email: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+  role: 'user' | 'premium' | 'admin';
+  subscription_type: 'free' | 'premium';
+  email_verified: boolean;
+  phone_verified: boolean;
+  mfa_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+### Interface Project Contract
+```typescript
+interface ProjectContract {
+  // CRUD de base
+  getProjectById(id: string): Promise<Project>;
+  getProjectsByUser(userId: string, filters?: ProjectFilters): Promise<Project[]>;
+  createProject(projectData: CreateProjectData): Promise<Project>;
+  updateProject(id: string, projectData: UpdateProjectData): Promise<Project>;
+  deleteProject(id: string): Promise<boolean>;
+
+  // Versioning
+  getProjectVersions(projectId: string): Promise<ProjectVersion[]>;
+  createProjectVersion(projectId: string, versionData: VersionData): Promise<ProjectVersion>;
+  restoreProjectVersion(projectId: string, versionNumber: number): Promise<boolean>;
+
+  // Workflows
+  getProjectWorkflows(projectId: string): Promise<Workflow[]>;
+  createWorkflow(projectId: string, workflowData: WorkflowData): Promise<Workflow>;
+  updateWorkflowStatus(workflowId: string, status: string): Promise<boolean>;
+}
+
+interface Project {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  status: 'draft' | 'active' | 'completed' | 'archived';
+  visibility: 'private' | 'shared' | 'public';
+  settings: ProjectSettings;
+  metadata: ProjectMetadata;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+### Interface Storage Contract
+```typescript
+interface StorageContract {
+  // Gestion des fichiers
+  getFileById(id: string): Promise<FileMetadata>;
+  getFilesByProject(projectId: string): Promise<FileMetadata[]>;
+  getFilesByUser(userId: string, filters?: FileFilters): Promise<FileMetadata[]>;
+  createFileRecord(fileData: CreateFileData): Promise<FileMetadata>;
+  updateFileMetadata(id: string, metadata: UpdateFileData): Promise<FileMetadata>;
+  deleteFile(id: string): Promise<boolean>;
+
+  // Transformations
+  getFileTransformations(fileId: string): Promise<Transformation[]>;
+  createTransformation(transformData: CreateTransformData): Promise<Transformation>;
+  getTransformationStatus(transformId: string): Promise<TransformationStatus>;
+  updateTransformationProgress(transformId: string, progress: number): Promise<boolean>;
+
+  // CDN et cache
+  getCDNUrls(fileId: string): Promise<CDNUrls>;
+  invalidateCDNCache(fileIds: string[]): Promise<boolean>;
+  getStorageStats(userId: string): Promise<StorageStats>;
+}
+
+interface FileMetadata {
+  id: string;
+  user_id: string;
+  project_id?: string;
+  original_name: string;
+  file_path: string;
+  file_type: string;
+  mime_type: string;
+  size_bytes: number;
+  checksum_md5: string;
+  storage_provider: string;
+  is_public: boolean;
+  metadata: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+### Interface AI Contract
+```typescript
+interface AIContract {
+  // Analyses
+  getAnalysisJobs(projectId: string): Promise<AnalysisJob[]>;
+  createAnalysisJob(jobData: CreateAnalysisData): Promise<AnalysisJob>;
+  getJobStatus(jobId: string): Promise<JobStatus>;
+  updateJobProgress(jobId: string, progress: number): Promise<boolean>;
+  getAnalysisResults(jobId: string): Promise<AnalysisResult>;
+
+  // Générations
+  getGenerationJobs(projectId: string): Promise<GenerationJob[]>;
+  createGenerationJob(jobData: CreateGenerationData): Promise<GenerationJob>;
+  getGenerationStatus(jobId: string): Promise<GenerationStatus>;
+  getGenerationResults(jobId: string): Promise<GenerationResult>;
+
+  // Modèles et performance
+  getAvailableModels(): Promise<AIModel[]>;
+  getModelPerformance(modelName: string): Promise<ModelPerformance>;
+  updateModelMetrics(modelName: string, metrics: ModelMetrics): Promise<boolean>;
+}
+
+interface AnalysisJob {
+  id: string;
+  project_id: string;
+  job_type: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  progress_percent: number;
+  parameters: Record<string, any>;
+  result?: AnalysisResult;
+  error_message?: string;
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+}
+```
+
+### Stratégie de Migration des Contrats
+
+#### Phase 1 - Implémentation des contrats (En cours)
+- Développement des interfaces TypeScript
+- Implémentation des endpoints correspondants
+- Tests avec données mockées
+- Documentation des contrats
+
+#### Phase 2 - Migration progressive (Future)
+- Migration service par service vers les contrats
+- Maintien de la compatibilité avec les APIs existantes
+- Monitoring des performances et de la fiabilité
+- Formation des équipes de développement
+
+#### Phase 3 - Consolidation (Future)
+- Décommissionnement des connexions directes
+- Optimisation des performances centralisées
+- Mise en place de la haute disponibilité
+- Documentation finale et formation
+
+### Endpoints de Contrats (Futurs)
+
+#### GET /api/v1/contracts/user/{user_id}
+**Description** : Accès aux données utilisateur via contrat centralisé
+
+**Permissions** : user, premium, admin
+
+**Réponse** :
+```json
+{
+  "user": {
+    "id": "user_123456789",
+    "email": "user@example.com",
+    "role": "premium",
+    "subscription_type": "premium",
+    "profile": {
+      "first_name": "John",
+      "last_name": "Doe",
+      "avatar_url": "https://cdn.visiobook.com/avatars/user_123.jpg"
+    }
+  },
+  "source": "centralized_contract",
+  "cache_status": "hit",
+  "response_time_ms": 15
+}
+```
+
+#### GET /api/v1/contracts/project/{project_id}
+**Description** : Accès aux données projet via contrat centralisé
+
+**Permissions** : user, premium, admin
+
+**Réponse** :
+```json
+{
+  "project": {
+    "id": "proj_123456789",
+    "title": "Mon Projet",
+    "status": "active",
+    "workflows": [
+      {
+        "id": "workflow_456789",
+        "type": "ai_analysis",
+        "status": "completed"
+      }
+    ]
+  },
+  "source": "centralized_contract",
+  "aggregated_from": ["project_service", "user_service", "ai_service"]
 }
 ```
 

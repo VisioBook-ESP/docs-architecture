@@ -32,7 +32,7 @@ graph TB
 
     subgraph "Backend Microservices"
         USER_SVC[Core User Service<br/>:8081]
-        PROJECT_SVC[Core Project Service<br/>:8082]
+        PROJECT_SVC[Core Project Service<br/>:8086]
         STORAGE_SVC[Support Storage Service<br/>:8089]
         AI_SVC[AI Analysis Service<br/>:8083]
         DB_SVC[Core Database Service<br/>:8084]
@@ -68,11 +68,27 @@ graph TB
     class CDN,REDIS,HOSTING infra
 ```
 
-### Schémas de données côté client
+### Architecture de données côté client
 
-#### Cache Redis - Sessions utilisateur
+#### Note sur l'architecture de données
+
+> **🏗️ Responsabilité de ce service (Phase actuelle)**
+>
+> Le Web User Portal **ne gère aucune donnée directement**. Il consomme exclusivement les APIs des microservices backend et utilise uniquement du cache côté client pour optimiser les performances.
+>
+> **🎯 Délégation complète**
+>
+> Toutes les opérations de données sont déléguées aux services appropriés :
+> - **Authentification** → Core User Service
+> - **Projets** → Core Project Service
+> - **Fichiers** → Support Storage Service
+> - **Analyse IA** → AI Analysis Service
+
+#### Cache Redis - Sessions utilisateur (Délégué)
+
 ```sql
--- Session cache structure (Redis)
+-- Session cache structure (Redis) - GÉRÉ PAR Core User Service
+-- Le Web Portal accède à ces données via les APIs du Core User Service
 KEY: session:{user_id}
 VALUE: {
   "user": {
@@ -93,7 +109,8 @@ VALUE: {
 }
 TTL: 86400 (24h)
 
--- Project cache
+-- Project cache - GÉRÉ PAR Core Project Service
+-- Le Web Portal accède à ces données via les APIs du Core Project Service
 KEY: projects:{user_id}
 VALUE: [
   {
@@ -103,7 +120,7 @@ VALUE: [
     "updated_at": "2024-01-15T10:30:00Z"
   }
 ]
-TTL: 300 (5min)
+TTL: 60 (1min)
 ```
 
 #### State Management - Pinia Stores
@@ -189,11 +206,11 @@ VITE_APP_URL=https://app.visiobook.com
 NODE_ENV=production
 
 # Backend Services URLs
-VITE_USER_SERVICE_URL=https://api.visiobook.com:8081
-VITE_PROJECT_SERVICE_URL=https://api.visiobook.com:8082
-VITE_STORAGE_SERVICE_URL=https://api.visiobook.com:8089
-VITE_AI_SERVICE_URL=https://api.visiobook.com:8083
-VITE_DATABASE_SERVICE_URL=https://api.visiobook.com:8084
+VITE_USER_SERVICE_URL=https://api.visiobook.com/user-service
+VITE_PROJECT_SERVICE_URL=https://api.visiobook.com/project-service
+VITE_STORAGE_SERVICE_URL=https://api.visiobook.com/storage-service
+VITE_AI_SERVICE_URL=https://api.visiobook.com/ai-service
+VITE_DATABASE_SERVICE_URL=https://api.visiobook.com/database-service
 
 # CDN & Assets
 VITE_CDN_URL=https://cdn.visiobook.com
@@ -218,6 +235,8 @@ VITE_API_TIMEOUT=30000
 ```
 
 ## Authentification et sécurité
+
+> **📋 Référence** : Voir [Règles Communes](./regles_communes.md) pour les standards d'authentification, permissions et sécurité.
 
 ### Délégation au Core User Service
 Le Web User Portal ne gère pas l'authentification directement. Tous les appels d'authentification sont délégués au Core User Service.
@@ -270,27 +289,27 @@ interface TokenManager {
   "backend_services": {
     "core_user_service": {
       "status": "UP",
-      "url": "https://api.visiobook.com:8081",
+      "url": "https://api.visiobook.com/user-service",
       "responseTime": "45ms"
     },
     "core_project_service": {
       "status": "UP",
-      "url": "https://api.visiobook.com:8082",
+      "url": "https://api.visiobook.com/project-service",
       "responseTime": "32ms"
     },
     "support_storage_service": {
       "status": "UP",
-      "url": "https://api.visiobook.com:8089",
+      "url": "https://api.visiobook.com/storage-service",
       "responseTime": "67ms"
     },
     "ai_analysis_service": {
       "status": "UP",
-      "url": "https://api.visiobook.com:8083",
+      "url": "https://api.visiobook.com/ai-service",
       "responseTime": "123ms"
     },
     "core_database_service": {
       "status": "UP",
-      "url": "https://api.visiobook.com:8084",
+      "url": "https://api.visiobook.com/database-service",
       "responseTime": "28ms"
     }
   },
@@ -856,13 +875,13 @@ Frontend: Page /projects/{id}/duplicate
 ### Codes d'erreur spécifiques au frontend
 ```json
 {
-  "NETWORK_ERROR": "Unable to connect to backend services",
-  "TOKEN_REFRESH_FAILED": "Session expired, please log in again",
-  "UPLOAD_INTERRUPTED": "File upload was interrupted, resuming...",
-  "CACHE_MISS": "Data not available offline",
-  "SERVICE_DEGRADED": "Some features may be limited due to service issues",
-  "QUOTA_WARNING": "Approaching usage limits",
-  "BROWSER_UNSUPPORTED": "Browser version not supported"
+  "VISIOBOOK_NETWORK_ERROR": "Unable to connect to backend services",
+  "VISIOBOOK_TOKEN_REFRESH_FAILED": "Session expired, please log in again",
+  "VISIOBOOK_UPLOAD_INTERRUPTED": "File upload was interrupted, resuming...",
+  "VISIOBOOK_CACHE_MISS": "Data not available offline",
+  "VISIOBOOK_SERVICE_DEGRADED": "Some features may be limited due to service issues",
+  "VISIOBOOK_QUOTA_WARNING": "Approaching usage limits",
+  "VISIOBOOK_BROWSER_UNSUPPORTED": "Browser version not supported"
 }
 ```
 

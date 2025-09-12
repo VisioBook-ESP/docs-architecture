@@ -3,10 +3,10 @@
 ## Vue d'ensemble du service
 
 ### Rôle et responsabilités
-Le **Support Storage Service** est responsable de la gestion centralisée de tous les fichiers et médias de l'écosystème Visiobook. Il gère l'upload, le stockage, la transformation, la distribution via CDN et l'optimisation des coûts de stockage.
+Le **Support Storage Service** est responsable de la gestion centralisée de tous les fichiers et médias de l'écosystème Visiobook. Il gère l'upload, le stockage, la transformation, la distribution et l'optimisation des coûts de stockage.
 
 ### Justification de l'atomisation
-- **Performance** : Optimisation spécifique pour les opérations de stockage et CDN
+- **Performance** : Optimisation spécifique pour les opérations de stockage
 - **Sécurité** : Gestion centralisée des permissions et chiffrement des fichiers
 - **Coût** : Optimisation des coûts de stockage (tiers, compression, lifecycle)
 - **Scalabilité** : Gestion indépendante des volumes de données massifs
@@ -14,7 +14,7 @@ Le **Support Storage Service** est responsable de la gestion centralisée de tou
 ### Informations techniques
 - **Port** : 8089
 - **Technology Stack** : Python 3.11 + FastAPI + Pillow + FFmpeg
-- **Storage** : Azure Blob Storage + S3 + CDN
+- **Storage** : Azure Blob Storage + S3
 - **Processing** : Image/Video transformation en temps réel
 - **Version API** : v1
 
@@ -27,7 +27,6 @@ graph TB
         UPLOAD[Upload Manager<br/>Multipart + Resumable]
         TRANSFORM[Media Processor<br/>Pillow + FFmpeg]
         METADATA[Metadata Manager<br/>EXIF + File Analysis]
-        CDN[CDN Manager<br/>Distribution + Cache]
         SECURITY[Security Module<br/>Permissions + Encryption]
     end
 
@@ -37,16 +36,13 @@ graph TB
         LOCAL[Local Storage<br/>Temp Processing]
     end
 
-    subgraph "CDN & Processing"
-        AZURE_CDN[Azure CDN<br/>Global Distribution]
-        CLOUDFLARE[Cloudflare<br/>Edge Processing]
+    subgraph "Processing & Cache"
         REDIS[(Redis<br/>Metadata Cache)]
     end
 
     API --> UPLOAD
     API --> TRANSFORM
     API --> METADATA
-    API --> CDN
     API --> SECURITY
 
     UPLOAD --> AZURE
@@ -55,16 +51,14 @@ graph TB
 
     TRANSFORM --> LOCAL
     METADATA --> REDIS
-    CDN --> AZURE_CDN
-    CDN --> CLOUDFLARE
 
     classDef service fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef storage fill:#fff8e1,stroke:#f9a825,stroke-width:2px
-    classDef cdn fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef cache fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
 
-    class API,UPLOAD,TRANSFORM,METADATA,CDN,SECURITY service
+    class API,UPLOAD,TRANSFORM,METADATA,SECURITY service
     class AZURE,S3,LOCAL storage
-    class AZURE_CDN,CLOUDFLARE,REDIS cdn
+    class REDIS cache
 ```
 
 ### Schémas de base de données
@@ -73,7 +67,7 @@ graph TB
 
 > **🏗️ Responsabilité de ce service (Phase actuelle)**
 >
-> Le Support Storage Service est **propriétaire** de toutes les données de fichiers, métadonnées, transformations et CDN. Il mocke localement les références aux utilisateurs (user_id) et projets (project_id) nécessaires à son fonctionnement.
+> Le Support Storage Service est **propriétaire** de toutes les données de fichiers, métadonnées et transformations. Il mocke localement les références aux utilisateurs (user_id) et projets (project_id) nécessaires à son fonctionnement.
 >
 > **🎯 Migration future**
 >
@@ -142,22 +136,6 @@ CREATE INDEX idx_file_transformations_source ON file_transformations(source_file
 CREATE INDEX idx_file_transformations_target ON file_transformations(target_file_id);
 CREATE INDEX idx_file_transformations_status ON file_transformations(status);
 
--- CDN cache table
-CREATE TABLE cdn_cache (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    file_id UUID REFERENCES files(id) ON DELETE CASCADE,
-    cdn_provider VARCHAR(50) NOT NULL,
-    cdn_url VARCHAR(500) NOT NULL,
-    cache_key VARCHAR(255) NOT NULL,
-    hit_count BIGINT DEFAULT 0,
-    last_hit_at TIMESTAMP,
-    expires_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX idx_cdn_cache_file_id ON cdn_cache(file_id);
-CREATE INDEX idx_cdn_cache_key ON cdn_cache(cache_key);
-CREATE INDEX idx_cdn_cache_provider ON cdn_cache(cdn_provider);
 ```
 
 ### Variables d'environnement
@@ -171,12 +149,6 @@ AWS_ACCESS_KEY_ID=your-aws-access-key
 AWS_SECRET_ACCESS_KEY=your-aws-secret-key
 AWS_S3_BUCKET=visiobook-backup
 AWS_REGION=eu-west-1
-
-# CDN Configuration
-AZURE_CDN_ENDPOINT=https://visiobook.azureedge.net
-CLOUDFLARE_ZONE_ID=your-cloudflare-zone-id
-CLOUDFLARE_API_TOKEN=your-cloudflare-token
-CDN_CACHE_TTL=86400
 
 # Processing
 TEMP_STORAGE_PATH=/tmp/visiobook
@@ -266,11 +238,6 @@ X-Client-Version: <client_version>
       "responseTime": "67ms",
       "available_space": "98%"
     },
-    "cdn": {
-      "status": "UP",
-      "hit_ratio": "94.5%",
-      "cache_size": "2.3TB"
-    },
     "processing_queue": {
       "status": "UP",
       "pending_jobs": 15,
@@ -333,8 +300,7 @@ Content-Disposition: form-data; name="metadata"
   },
   "urls": {
     "download": "https://api.visiobook.com/api/v1/storage/download/file_123456789",
-    "cdn": "https://cdn.visiobook.com/files/file_123456789",
-    "thumbnail": "https://cdn.visiobook.com/thumbnails/file_123456789"
+    "thumbnail": "https://api.visiobook.com/api/v1/storage/download/file_123456789_thumb"
   }
 }
 ```
@@ -440,8 +406,7 @@ Content-Length: 1048576
       "created_at": "2024-01-15T10:30:00Z",
       "urls": {
         "download": "https://api.visiobook.com/api/v1/storage/download/file_123456789",
-        "cdn": "https://cdn.visiobook.com/files/file_123456789",
-        "thumbnail": "https://cdn.visiobook.com/thumbnails/file_123456789"
+        "thumbnail": "https://api.visiobook.com/api/v1/storage/download/file_123456789_thumb"
       },
       "metadata": {
         "dimensions": {
@@ -509,9 +474,8 @@ Content-Length: 1048576
   },
   "urls": {
     "download": "https://api.visiobook.com/api/v1/storage/download/file_123456789",
-    "cdn": "https://cdn.visiobook.com/files/file_123456789",
-    "preview": "https://cdn.visiobook.com/previews/file_123456789",
-    "thumbnail": "https://cdn.visiobook.com/thumbnails/file_123456789"
+    "preview": "https://api.visiobook.com/api/v1/storage/download/file_123456789_preview",
+    "thumbnail": "https://api.visiobook.com/api/v1/storage/download/file_123456789_thumb"
   },
   "transformations": [
     {
@@ -692,84 +656,7 @@ Accept-Ranges: bytes
     "original_name": "image_resized.jpg",
     "size_bytes": 245760,
     "urls": {
-      "download": "https://api.visiobook.com/api/v1/storage/download/file_987654321",
-      "cdn": "https://cdn.visiobook.com/files/file_987654321"
-    }
-  }
-}
-```
-
-### CDN Management
-
-#### POST /api/v1/storage/cdn/purge
-**Description** : Purge du cache CDN pour un fichier
-
-**Permissions** : user, premium, admin
-
-**Requête** :
-```json
-{
-  "file_ids": ["file_123456789", "file_987654321"],
-  "purge_type": "all" // ou "thumbnails", "previews"
-}
-```
-
-**Réponse** :
-```json
-{
-  "purge_request": {
-    "id": "purge_123456789",
-    "status": "processing",
-    "files_count": 2,
-    "estimated_completion": "2024-01-15T10:35:00Z"
-  },
-  "cdn_providers": [
-    {
-      "provider": "azure_cdn",
-      "status": "queued",
-      "urls_purged": 4
-    },
-    {
-      "provider": "cloudflare",
-      "status": "processing",
-      "urls_purged": 4
-    }
-  ]
-}
-```
-
-#### GET /api/v1/storage/cdn/stats
-**Description** : Statistiques d'utilisation du CDN
-
-**Permissions** : user, premium, admin
-
-**Paramètres de requête** :
-```
-?period=7d
-&file_id=file_123456789
-```
-
-**Réponse** :
-```json
-{
-  "period": "7d",
-  "stats": {
-    "total_requests": 15420,
-    "cache_hits": 14567,
-    "cache_misses": 853,
-    "hit_ratio": 94.5,
-    "bandwidth_gb": 125.6,
-    "top_files": [
-      {
-        "file_id": "file_123456789",
-        "requests": 3420,
-        "bandwidth_gb": 45.2
-      }
-    ],
-    "geographic_distribution": {
-      "europe": 65.2,
-      "north_america": 25.8,
-      "asia": 9.0
+      "download": "https://api.visiobook.com/api/v1/storage/download/file_987654321"
     }
   }
 }
@@ -786,7 +673,6 @@ sequenceDiagram
     participant Validator as File Validator
     participant Azure as Azure Blob
     participant S3 as AWS S3 Backup
-    participant CDN as CDN Manager
     participant DB as Database
 
     Client->>API: POST /api/v1/storage/upload
@@ -798,8 +684,6 @@ sequenceDiagram
     S3-->>API: Backup successful
     API->>DB: Store file metadata
     DB-->>API: Metadata stored
-    API->>CDN: Register for CDN distribution
-    CDN-->>API: CDN URL generated
     API-->>Client: Return file info + URLs
 ```
 
@@ -852,8 +736,7 @@ flowchart TD
     CheckBackup -->|No| StoreMetadata[Store Metadata]
     UploadBackup --> StoreMetadata
 
-    StoreMetadata --> RegisterCDN[Register with CDN]
-    RegisterCDN --> AutoTransform{Auto Transform?}
+    StoreMetadata --> AutoTransform{Auto Transform?}
 
     AutoTransform -->|Yes| QueueTransform[Queue Transformations]
     AutoTransform -->|No| Success[Return Success]
@@ -903,7 +786,7 @@ flowchart TD
 
 2. GET /api/v1/storage/download/{file_id}
    - Téléchargement des previews de styles
-   - Affichage via CDN pour performance
+   - Affichage direct via le service de stockage
 ```
 
 ### Milestone 3: Générer et visualiser une animation
@@ -926,9 +809,9 @@ flowchart TD
    - Streaming de la vidéo générée
    - Support du Range pour lecture progressive
 
-2. GET /api/v1/storage/cdn/stats
-   - Statistiques de visualisation
-   - Optimisation de la distribution
+2. GET /api/v1/storage/files/{file_id}
+   - Récupération des métadonnées de visualisation
+   - Statistiques d'accès aux fichiers
 ```
 
 ### Milestone 4: Exporter et partager l'animation
@@ -1020,7 +903,7 @@ flowchart TD
 1. **Fichiers existants** : Migration transparente des métadonnées
 2. **URLs de téléchargement** : Redirection automatique vers nouvelles URLs
 3. **Transformations** : Retraitement automatique si nécessaire
-4. **CDN** : Mise à jour progressive des caches
+4. **Cache** : Mise à jour progressive des caches applicatifs
 
 ### Exemple de migration v1 → v2
 ```json

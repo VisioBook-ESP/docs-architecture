@@ -79,6 +79,7 @@ CREATE TABLE users (
     subscription_type VARCHAR(50) DEFAULT 'free',
     email_verified BOOLEAN DEFAULT FALSE,
     phone_verified BOOLEAN DEFAULT FALSE,
+    -- MFA fields - NON UTILISÉES DANS MVP
     mfa_enabled BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),

@@ -14,7 +14,7 @@ Le **Core User Service** est responsable de la gestion complète des utilisateur
 ### Informations techniques
 - **Port** : 8081
 - **Technology Stack** : Python 3.11 + FastAPI + SQLAlchemy + Pydantic
-- **Authentication** : JWT + OAuth 2.0 + Multi-Factor Authentication
+- **Authentication** : JWT + Password Authentication
 - **Database** : PostgreSQL + Redis (sessions)
 - **Version API** : v1
 
@@ -24,19 +24,17 @@ Le **Core User Service** est responsable de la gestion complète des utilisateur
 graph TB
     subgraph "Core User Service"
         API[API Layer<br/>FastAPI + Pydantic]
-        AUTH[Authentication Module<br/>JWT + OAuth2]
+        AUTH[Authentication Module<br/>JWT + Password]
         PROFILE[Profile Management<br/>SQLAlchemy Models]
         SESSION[Session Manager<br/>Redis Sessions]
-        SECURITY[Security Module<br/>MFA + Password Policy]
-        NOTIFICATION[Notification Client<br/>Email + SMS]
+        SECURITY[Security Module<br/>Password Policy]
+        NOTIFICATION[Notification Client<br/>Email]
     end
 
     subgraph "External Dependencies"
         DB[(PostgreSQL<br/>User Data)]
         REDIS[(Redis<br/>Sessions + Cache)]
         EMAIL[Email Service<br/>SendGrid/SMTP]
-        SMS[SMS Service<br/>Twilio]
-        OAUTH[OAuth Providers<br/>Google, GitHub]
     end
 
     API --> AUTH
@@ -49,14 +47,12 @@ graph TB
     PROFILE --> DB
     SECURITY --> NOTIFICATION
     NOTIFICATION --> EMAIL
-    NOTIFICATION --> SMS
-    AUTH --> OAUTH
 
     classDef service fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
     classDef external fill:#fff8e1,stroke:#f9a825,stroke-width:2px
 
     class API,AUTH,PROFILE,SESSION,SECURITY,NOTIFICATION service
-    class DB,REDIS,EMAIL,SMS,OAUTH external
+    class DB,REDIS,EMAIL external
 ```
 
 ### Schémas de base de données
@@ -88,6 +84,7 @@ CREATE TABLE users (
     email_verified BOOLEAN DEFAULT FALSE,
     phone_number VARCHAR(20),
     phone_verified BOOLEAN DEFAULT FALSE,
+    -- MFA fields - NON UTILISÉES DANS MVP
     mfa_enabled BOOLEAN DEFAULT FALSE,
     mfa_secret VARCHAR(255),
     last_login_at TIMESTAMP,
@@ -139,22 +136,22 @@ CREATE INDEX idx_user_sessions_user_id ON user_sessions(user_id);
 CREATE INDEX idx_user_sessions_token ON user_sessions(session_token);
 CREATE INDEX idx_user_sessions_expires ON user_sessions(expires_at);
 
--- OAuth connections table
-CREATE TABLE oauth_connections (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    provider VARCHAR(50) NOT NULL,
-    provider_user_id VARCHAR(255) NOT NULL,
-    access_token TEXT,
-    refresh_token TEXT,
-    expires_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(provider, provider_user_id)
-);
+-- OAuth connections table - NON UTILISÉE DANS MVP
+-- CREATE TABLE oauth_connections (
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+--     provider VARCHAR(50) NOT NULL,
+--     provider_user_id VARCHAR(255) NOT NULL,
+--     access_token TEXT,
+--     refresh_token TEXT,
+--     expires_at TIMESTAMP,
+--     created_at TIMESTAMP DEFAULT NOW(),
+--     updated_at TIMESTAMP DEFAULT NOW(),
+--     UNIQUE(provider, provider_user_id)
+-- );
 
-CREATE INDEX idx_oauth_connections_user_id ON oauth_connections(user_id);
-CREATE INDEX idx_oauth_connections_provider ON oauth_connections(provider);
+-- CREATE INDEX idx_oauth_connections_user_id ON oauth_connections(user_id);
+-- CREATE INDEX idx_oauth_connections_provider ON oauth_connections(provider);
 ```
 
 ### Variables d'environnement
@@ -166,14 +163,14 @@ REDIS_URL=redis://localhost:6379
 
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key
-JWT_EXPIRES_IN=86400
+JWT_EXPIRES_IN=900
 JWT_REFRESH_EXPIRES_IN=604800
 
-# OAuth Providers
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GITHUB_CLIENT_ID=your-github-client-id
-GITHUB_CLIENT_SECRET=your-github-client-secret
+# OAuth Providers - NON UTILISÉES DANS MVP
+# GOOGLE_CLIENT_ID=your-google-client-id
+# GOOGLE_CLIENT_SECRET=your-google-client-secret
+# GITHUB_CLIENT_ID=your-github-client-id
+# GITHUB_CLIENT_SECRET=your-github-client-secret
 
 # Email Service
 SENDGRID_API_KEY=your-sendgrid-api-key
@@ -182,14 +179,14 @@ SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
 
-# SMS Service
-TWILIO_ACCOUNT_SID=your-twilio-sid
-TWILIO_AUTH_TOKEN=your-twilio-token
-TWILIO_PHONE_NUMBER=+1234567890
+# SMS Service - NON UTILISÉ DANS MVP
+# TWILIO_ACCOUNT_SID=your-twilio-sid
+# TWILIO_AUTH_TOKEN=your-twilio-token
+# TWILIO_PHONE_NUMBER=+1234567890
 
 # Security
 BCRYPT_ROUNDS=12
-MFA_ISSUER=Visiobook
+# MFA_ISSUER=Visiobook - NON UTILISÉ DANS MVP
 PASSWORD_MIN_LENGTH=8
 MAX_LOGIN_ATTEMPTS=5
 LOCKOUT_DURATION=900
@@ -310,7 +307,7 @@ X-Client-Version: <client_version>
   "tokens": {
     "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "refresh_token": "refresh_token_here",
-    "expires_in": 86400,
+    "expires_in": 900,
     "token_type": "Bearer"
   },
   "verification": {
@@ -355,7 +352,7 @@ X-Client-Version: <client_version>
   "tokens": {
     "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "refresh_token": "refresh_token_here",
-    "expires_in": 86400,
+    "expires_in": 900,
     "token_type": "Bearer"
   },
   "session": {
@@ -404,49 +401,9 @@ X-Client-Version: <client_version>
   "tokens": {
     "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "refresh_token": "new_refresh_token_here",
-    "expires_in": 86400,
+    "expires_in": 900,
     "token_type": "Bearer"
   }
-}
-```
-
-### OAuth Authentication
-
-#### GET /api/v1/auth/oauth/{provider}
-**Description** : Redirection vers le fournisseur OAuth
-
-**Permissions** : Aucune
-
-**Paramètres** :
-- `provider` : google, github
-
-**Réponse** : Redirection HTTP 302
-
-#### GET /api/v1/auth/oauth/{provider}/callback
-**Description** : Callback OAuth après authentification
-
-**Permissions** : Aucune
-
-**Réponse** :
-```json
-{
-  "user": {
-    "id": "user_123456789",
-    "email": "user@example.com",
-    "username": "johndoe",
-    "first_name": "John",
-    "last_name": "Doe",
-    "role": "user",
-    "subscription_type": "free",
-    "oauth_provider": "google"
-  },
-  "tokens": {
-    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refresh_token": "refresh_token_here",
-    "expires_in": 86400,
-    "token_type": "Bearer"
-  },
-  "is_new_user": false
 }
 ```
 
@@ -560,72 +517,6 @@ X-Client-Version: <client_version>
   "message": "Password changed successfully",
   "security_alert_sent": true,
   "sessions_invalidated": 3
-}
-```
-
-### Multi-Factor Authentication
-
-#### POST /api/v1/auth/mfa/setup
-**Description** : Configuration de l'authentification à deux facteurs
-
-**Permissions** : user, premium, admin
-
-**Réponse** :
-```json
-{
-  "qr_code": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
-  "secret": "JBSWY3DPEHPK3PXP",
-  "backup_codes": [
-    "12345678",
-    "87654321",
-    "11223344",
-    "44332211",
-    "55667788"
-  ],
-  "setup_url": "otpauth://totp/Visiobook:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Visiobook"
-}
-```
-
-#### POST /api/v1/auth/mfa/verify
-**Description** : Vérification du code MFA
-
-**Permissions** : user, premium, admin
-
-**Requête** :
-```json
-{
-  "code": "123456"
-}
-```
-
-**Réponse** :
-```json
-{
-  "verified": true,
-  "mfa_enabled": true,
-  "message": "MFA successfully enabled"
-}
-```
-
-#### POST /api/v1/auth/mfa/disable
-**Description** : Désactivation de l'authentification à deux facteurs
-
-**Permissions** : user, premium, admin
-
-**Requête** :
-```json
-{
-  "password": "CurrentPassword123!",
-  "code": "123456"
-}
-```
-
-**Réponse** :
-```json
-{
-  "mfa_disabled": true,
-  "backup_codes_invalidated": true,
-  "message": "MFA successfully disabled"
 }
 ```
 
@@ -766,7 +657,7 @@ X-Client-Version: <client_version>
   "tokens": {
     "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "refresh_token": "refresh_token_here",
-    "expires_in": 86400
+    "expires_in": 900
   }
 }
 ```
@@ -821,7 +712,7 @@ sequenceDiagram
     API-->>Client: Return user + tokens
 ```
 
-### Diagramme de séquence - Authentification avec MFA
+### Diagramme de séquence - Authentification simple
 
 ```mermaid
 sequenceDiagram
@@ -829,22 +720,14 @@ sequenceDiagram
     participant API as User API
     participant DB as Database
     participant Redis as Redis Cache
-    participant MFA as MFA Service
 
     Client->>API: POST /api/v1/auth/login
     API->>DB: Verify credentials
     DB-->>API: Credentials valid
-    API->>DB: Check MFA enabled
-    DB-->>API: MFA required
-    API->>Redis: Store temp session
-    API-->>Client: MFA required (temp token)
-    Client->>API: POST /api/v1/auth/mfa/verify
-    API->>MFA: Verify TOTP code
-    MFA-->>API: Code valid
-    API->>API: Generate full JWT tokens
-    API->>Redis: Store full session
+    API->>API: Generate JWT tokens
+    API->>Redis: Store session
     API->>DB: Update last login
-    API-->>Client: Return full tokens
+    API-->>Client: Return tokens + user data
 ```
 
 ### Diagramme de flux - Gestion des sessions
@@ -853,13 +736,7 @@ sequenceDiagram
 flowchart TD
     Start([User Login]) --> ValidateCreds{Validate Credentials}
     ValidateCreds -->|Invalid| LoginFail[Login Failed]
-    ValidateCreds -->|Valid| CheckMFA{MFA Enabled?}
-
-    CheckMFA -->|No| CreateSession[Create Session]
-    CheckMFA -->|Yes| RequireMFA[Require MFA Code]
-    RequireMFA --> ValidateMFA{Valid MFA?}
-    ValidateMFA -->|No| MFAFail[MFA Failed]
-    ValidateMFA -->|Yes| CreateSession
+    ValidateCreds -->|Valid| CreateSession[Create Session]
 
     CreateSession --> GenerateTokens[Generate JWT Tokens]
     GenerateTokens --> StoreSession[Store in Redis]
@@ -871,7 +748,6 @@ flowchart TD
     CheckLockout -->|Yes| LockAccount[Lock Account]
     CheckLockout -->|No| End([End])
 
-    MFAFail --> End
     LockAccount --> End
     Success --> End
 ```

@@ -650,8 +650,8 @@ X-Content-Hash: <sha256_hash>
         "scene_id": "scene_1",
         "image_id": "img_001",
         "file_path": "generated/proj_123/scene_1_001.jpg",
-        "url": "https://cdn.visiobook.com/generated/img_001.jpg",
-        "thumbnail_url": "https://cdn.visiobook.com/thumbnails/img_001.jpg",
+        "url": "https://api.visiobook.com/api/v1/storage/download/img_001",
+        "thumbnail_url": "https://api.visiobook.com/api/v1/storage/download/img_001_thumb",
         "resolution": "1920x1080",
         "file_size_bytes": 2048576,
         "generation_params": {
@@ -746,7 +746,7 @@ X-Content-Hash: <sha256_hash>
     "audio_file": {
       "id": "audio_narration_001",
       "file_path": "generated/proj_123/narration.mp3",
-      "url": "https://cdn.visiobook.com/audio/audio_narration_001.mp3",
+      "url": "https://api.visiobook.com/api/v1/storage/download/audio_narration_001",
       "duration_seconds": 180,
       "file_size_bytes": 4320000,
       "format": "mp3",
@@ -793,7 +793,7 @@ X-Content-Hash: <sha256_hash>
     "audio_file": {
       "id": "music_epic_001",
       "file_path": "generated/proj_123/background_music.mp3",
-      "url": "https://cdn.visiobook.com/audio/music_epic_001.mp3",
+      "url": "https://api.visiobook.com/api/v1/storage/download/music_epic_001",
       "duration_seconds": 120,
       "file_size_bytes": 2880000,
       "format": "mp3",

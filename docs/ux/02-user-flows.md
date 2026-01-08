@@ -461,7 +461,7 @@ flowchart TD
 
     O & P & Q & R & S & T --> M
 
-    N -->|Terminer| U[Fin video}
+    N -->|Terminer| U[Fin video]
     U --> V[Ecran fin]
     V --> W{Action suivante}
 

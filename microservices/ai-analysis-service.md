@@ -58,7 +58,7 @@ graph TB
     end
 
     subgraph "External"
-        DB[core-database-service]
+        PG[(postgres-io<br/>analysis)]
         STORAGE[support-storage-service]
         MEDIA[ai-media-generation-service]
         ASSEMBLY[ai-storyboard-assembly-service]
@@ -84,7 +84,7 @@ graph TB
     CELERY --> SEMANTIC
     CELERY --> SCENE
 
-    SEMANTIC --> DB
+    SEMANTIC --> PG
     SCENE --> MEDIA
     CELERY --> PROJECT
 ```
@@ -362,7 +362,7 @@ class CharacterExtractionService:
 
 ```mermaid
 graph LR
-    AI[ai-analysis-service] --> DB[core-database-service]
+    AI[ai-analysis-service] --> PG[(postgres-io / analysis)]
     AI --> STORAGE[support-storage-service]
     AI --> MEDIA[ai-media-generation-service]
     AI --> PROJECT[core-project-service]
@@ -370,7 +370,7 @@ graph LR
 
 | Service cible | Endpoint | Objectif |
 |---------------|----------|----------|
-| core-database-service | `/api/v1/query` | Stockage resultats analyse |
+| postgres-io | Connexion directe (ORM) | Base analysis |
 | support-storage-service | `/api/v1/storage/files` | Recuperation contenu |
 | ai-media-generation-service | `/api/v1/generation/*` | Delegation generation images/audio |
 | core-project-service | `/api/v1/projects/:id` | Callbacks progression |
@@ -394,7 +394,7 @@ sequenceDiagram
     participant AI as ai-analysis-service
     participant CELERY as Celery Worker
     participant GPU as GPU (Models)
-    participant DB as Database
+    participant PG as PostgreSQL (postgres-io)
 
     PS->>AI: POST /analysis/semantic<br/>{ projectId, text }
     AI->>AI: Validate request
@@ -431,11 +431,11 @@ sequenceDiagram
         GPU-->>CELERY: Summary text
     end
 
-    CELERY->>DB: Save analysis result
+    CELERY->>PG: Save analysis result
     CELERY->>PS: Callback: analysis complete
 
     PS->>AI: GET /jobs/:jobId/result
-    AI->>DB: Get result
+    AI->>PG: Get result
     AI-->>PS: { scenes, characters, summary }
 ```
 

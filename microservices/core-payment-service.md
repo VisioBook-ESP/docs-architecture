@@ -44,7 +44,7 @@ graph TB
 
     subgraph "External"
         STRIPE_API[Stripe API]
-        DB[core-database-service]
+        PG[(PostgreSQL<br/>TBD)]
         USER[core-user-service]
         NOTIF[core-notification-service]
     end
@@ -62,8 +62,8 @@ graph TB
     PAY_SVC --> STRIPE
     STRIPE --> STRIPE_API
 
-    SUB_SVC --> DB
-    QUOTA_SVC --> DB
+    SUB_SVC --> PG
+    QUOTA_SVC --> PG
     SUB_SVC --> USER
     PAY_SVC --> NOTIF
 ```
@@ -176,7 +176,7 @@ type StripeWebhookEvent =
 ```mermaid
 graph LR
     PAY[core-payment-service] --> STRIPE[Stripe API]
-    PAY --> DB[core-database-service]
+    PAY --> PG[(PostgreSQL<br/>TBD)]
     PAY --> USER[core-user-service]
     PAY --> NOTIF[core-notification-service]
 ```
@@ -186,7 +186,7 @@ graph LR
 | Stripe API | Traitement paiements |
 | core-user-service | Mise a jour tier utilisateur |
 | core-notification-service | Emails confirmation |
-| core-database-service | Stockage transactions |
+| PostgreSQL (TBD) | Stockage transactions (connexion directe ORM, voir database-infrastructure.md) |
 
 ### Appels entrants
 
@@ -204,7 +204,7 @@ sequenceDiagram
     participant C as Client
     participant PS as core-payment-service
     participant STRIPE as Stripe API
-    participant DB as Database
+    participant PG as PostgreSQL
     participant US as core-user-service
     participant NS as Notification Service
 
@@ -220,7 +220,7 @@ sequenceDiagram
 
     STRIPE->>PS: POST /webhooks/stripe<br/>checkout.session.completed
 
-    PS->>DB: Create subscription record
+    PS->>PG: Create subscription record
     PS->>US: PATCH /users/:id/tier<br/>{ tier: "premium" }
     PS->>NS: Send confirmation email
 

@@ -45,7 +45,7 @@ graph TB
     end
 
     subgraph "External"
-        DB[core-database-service]
+        PG[(PostgreSQL<br/>TBD)]
         NOTIF[core-notification-service]
         AZURE_KV[Azure Key Vault]
     end
@@ -64,7 +64,7 @@ graph TB
     KMS --> VAULT
     VAULT --> AZURE_KV
 
-    AUDIT_SVC --> DB
+    AUDIT_SVC --> PG
     THREAT_SVC --> NOTIF
 ```
 
@@ -168,7 +168,7 @@ public class ThreatAnalysisResponse {
 
 ```mermaid
 graph LR
-    SEC[support-security-service] --> DB[core-database-service]
+    SEC[support-security-service] --> PG[(PostgreSQL<br/>TBD)]
     SEC --> NOTIF[core-notification-service]
     SEC --> VAULT[Azure Key Vault]
 ```

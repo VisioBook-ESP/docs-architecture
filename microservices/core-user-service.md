@@ -45,7 +45,7 @@ graph TB
     end
 
     subgraph "External"
-        DB[core-database-service]
+        PG[(postgres-crud<br/>core_user)]
         EMAIL[Email Provider<br/>SendGrid/SES]
         NOTIF[core-notification-service]
     end
@@ -63,9 +63,9 @@ graph TB
     USER_SVC --> VALID
 
     TOKEN_SVC --> JWT
-    SESSION_SVC --> DB
-    AUTH_SVC --> DB
-    USER_SVC --> DB
+    SESSION_SVC --> PG
+    AUTH_SVC --> PG
+    USER_SVC --> PG
 
     AUTH_SVC --> NOTIF
 ```
@@ -287,16 +287,16 @@ class UserService:
 
 ```mermaid
 graph LR
-    US[core-user-service] --> DB[core-database-service]
+    US[core-user-service] --> PG[(postgres-crud<br/>core_user)]
     US --> NOTIF[core-notification-service]
 
-    US -->|"Stockage users"| DB
+    US -->|"Stockage users"| PG
     US -->|"Emails auth"| NOTIF
 ```
 
 | Service cible | Endpoint | Objectif |
 |---------------|----------|----------|
-| core-database-service | `/api/v1/query` | CRUD utilisateurs, sessions |
+| postgres-crud | Connexion directe (ORM) | Base core_user |
 | core-notification-service | `/api/v1/email/send` | Emails verification, reset |
 
 ### Appels entrants
@@ -323,18 +323,18 @@ sequenceDiagram
     participant C as Client
     participant GW as API Gateway
     participant US as core-user-service
-    participant DB as core-database-service
+    participant PG as PostgreSQL (postgres-crud)
     participant NS as core-notification-service
 
     C->>GW: POST /api/v1/auth/register
     GW->>US: Forward request
 
-    US->>DB: Check email exists
-    DB-->>US: Not found
+    US->>PG: Check email exists
+    PG-->>US: Not found
 
     US->>US: Hash password (bcrypt)
-    US->>DB: INSERT user
-    DB-->>US: User created
+    US->>PG: INSERT user
+    PG-->>US: User created
 
     US->>US: Generate verification token
 
@@ -353,19 +353,19 @@ sequenceDiagram
     participant C as Client
     participant GW as API Gateway
     participant US as core-user-service
-    participant DB as core-database-service
+    participant PG as PostgreSQL (postgres-crud)
 
     C->>GW: POST /api/v1/auth/login<br/>{ email, password, deviceInfo }
     GW->>US: Forward request
 
-    US->>DB: Get user by email
-    DB-->>US: User found
+    US->>PG: Get user by email
+    PG-->>US: User found
 
     US->>US: Verify password (bcrypt)
 
     alt Password valid
-        US->>DB: Create session
-        DB-->>US: Session created
+        US->>PG: Create session
+        PG-->>US: Session created
 
         US->>US: Generate access token (15min)
         US->>US: Generate refresh token (30 days)
@@ -374,7 +374,7 @@ sequenceDiagram
         Note right of US: { accessToken, refreshToken, user }
         GW-->>C: Response
     else Password invalid
-        US->>DB: Increment failed attempts
+        US->>PG: Increment failed attempts
         US-->>GW: 401 Unauthorized
         GW-->>C: Invalid credentials
     end
@@ -387,18 +387,18 @@ sequenceDiagram
     participant C as Client
     participant GW as API Gateway
     participant US as core-user-service
-    participant DB as core-database-service
+    participant PG as PostgreSQL (postgres-crud)
 
     C->>GW: POST /api/v1/auth/refresh<br/>{ refreshToken }
     GW->>US: Forward request
 
     US->>US: Decode refresh token
-    US->>DB: Verify session exists
-    DB-->>US: Session active
+    US->>PG: Verify session exists
+    PG-->>US: Session active
 
     alt Session valid
         US->>US: Generate new access token
-        US->>DB: Update session lastActive
+        US->>PG: Update session lastActive
         US-->>GW: 200 OK { accessToken }
         GW-->>C: New access token
     else Session expired/revoked
@@ -409,7 +409,7 @@ sequenceDiagram
 
 ## Mocks pour tests
 
-### Mock Database Service
+### Mock Database
 
 ```python
 # tests/mocks/database_mock.py

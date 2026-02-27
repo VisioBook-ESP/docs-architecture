@@ -52,7 +52,7 @@ graph TB
     subgraph "External"
         STORAGE[support-storage-service]
         AI[ai-analysis-service]
-        DB[core-database-service]
+        PG[(PostgreSQL<br/>TBD)]
     end
 
     API --> IMG
@@ -74,7 +74,7 @@ graph TB
 
     IMG_SVC --> STORAGE
     AUDIO_SVC --> STORAGE
-    IMG_SVC --> DB
+    IMG_SVC --> PG
 ```
 
 ## Controllers et Endpoints
@@ -334,14 +334,14 @@ class AudioGenerationService:
 graph LR
     MEDIA[ai-media-generation-service] --> STORAGE[support-storage-service]
     MEDIA --> AI[ai-analysis-service]
-    MEDIA --> DB[core-database-service]
+    MEDIA --> PG[(PostgreSQL<br/>TBD)]
 ```
 
 | Service cible | Endpoint | Objectif |
 |---------------|----------|----------|
 | support-storage-service | `/api/v1/storage/upload` | Stockage images/audio |
 | ai-analysis-service | `/api/v1/analysis/*` | Recuperation scenes/personnages |
-| core-database-service | `/api/v1/query` | Stockage metadata |
+| PostgreSQL (TBD) | Connexion directe (ORM) | Stockage metadata (voir database-infrastructure.md) |
 
 ### Appels entrants
 

@@ -8,7 +8,7 @@ Cette documentation detaille les responsabilites de chaque microservice de l'arc
 
 | Document | Service | Phase | Description |
 |----------|---------|-------|-------------|
-| [core-database-service.md](./core-database-service.md) | Database | 1 | Gestion centralisee des bases de donnees |
+| [database-infrastructure.md](./database-infrastructure.md) | Database | 1 | Infrastructure PostgreSQL (2 clusters CNPG) |
 | [core-api-gateway.md](./core-api-gateway.md) | Gateway | 1 | Point d'entree unique, routage, auth |
 | [core-user-service.md](./core-user-service.md) | User | 2 | Authentification, profils, permissions |
 | [support-storage-service.md](./support-storage-service.md) | Storage | 2 | Stockage fichiers, OCR, streaming |
@@ -34,7 +34,8 @@ graph TB
 
     subgraph "Phase 1 - Infrastructure"
         GW[core-api-gateway<br/>Port 8080]
-        DB[core-database-service<br/>Port 8095]
+        PGCRUD[(postgres-crud<br/>CNPG Cluster)]
+        PGIO[(postgres-io<br/>CNPG Cluster)]
     end
 
     subgraph "Phase 2 - Core"
@@ -59,9 +60,7 @@ graph TB
         ASSEMBLY[ai-storyboard-assembly-service<br/>Port 8085]
     end
 
-    subgraph "Data Stores"
-        PG[(PostgreSQL)]
-        REDIS[(Redis)]
+    subgraph "External Storage"
         BLOB[Azure Blob]
     end
 
@@ -75,19 +74,17 @@ graph TB
     GW --> PAY
     GW --> NOTIF
 
-    USER --> DB
-    PROJECT --> DB
-    STORAGE --> DB
-    AI --> DB
-    PAY --> DB
-    NOTIF --> DB
-    SEC --> DB
-    INGEST --> DB
-    MEDIA --> DB
-    ASSEMBLY --> DB
+    USER --> PGCRUD
+    PROJECT --> PGCRUD
+    STORAGE --> PGIO
+    AI --> PGIO
+    INGEST --> PGIO
+    PAY --> PGCRUD
+    NOTIF --> PGCRUD
+    SEC --> PGCRUD
+    MEDIA --> PGIO
+    ASSEMBLY --> PGIO
 
-    DB --> PG
-    DB --> REDIS
     STORAGE --> BLOB
 
     PROJECT --> AI
@@ -103,9 +100,11 @@ graph TB
     classDef phase3 fill:#fff3e0,stroke:#f57c00
     classDef phase6 fill:#fce4ec,stroke:#c2185b
     classDef phase7 fill:#f3e5f5,stroke:#7b1fa2
+    classDef db fill:#dcedc8,stroke:#689f38
 
     class MOBILE priority
-    class GW,DB phase1
+    class GW phase1
+    class PGCRUD,PGIO db
     class USER,STORAGE phase2
     class PROJECT,AI phase3
     class PAY,NOTIF,SEC phase6
@@ -116,31 +115,32 @@ graph TB
 
 | Flow | Owner Principal | Services Impliques |
 |------|-----------------|-------------------|
-| **Flow 1: Auth** | core-user-service | api-gateway, database, notification |
-| **Flow 2: Import fichier** | core-project-service | storage, ingestion, database |
-| **Flow 3: OCR Scanner** | support-storage-service | project, ingestion, database |
-| **Flow 4: Configuration** | core-project-service | database |
+| **Flow 1: Auth** | core-user-service | api-gateway, notification |
+| **Flow 2: Import fichier** | core-project-service | storage, ingestion |
+| **Flow 3: OCR Scanner** | support-storage-service | project, ingestion |
+| **Flow 4: Configuration** | core-project-service | - |
 | **Flow 5: Generation** | ai-analysis-service | media-gen, assembly, storage, project |
 | **Flow 6: Player** | support-storage-service | project, assembly |
 | **Flow 7: Export/Partage** | core-project-service | storage |
-| **Flow 8: Historique** | core-project-service | database |
+| **Flow 8: Historique** | core-project-service | - |
 
 ## Matrice des Dependances
 
 ```mermaid
 graph LR
-    subgraph "Niveau 0 - Independant"
-        DB[core-database-service]
+    subgraph "Niveau 0 - Infrastructure"
+        PGCRUD[(postgres-crud)]
+        PGIO[(postgres-io)]
+        GW[core-api-gateway]
     end
 
-    subgraph "Niveau 1 - Depend de DB"
-        GW[core-api-gateway]
+    subgraph "Niveau 1 - Services de base"
         USER[core-user-service]
         STORAGE[support-storage-service]
         SEC[support-security-service]
     end
 
-    subgraph "Niveau 2 - Depend de Niveau 1"
+    subgraph "Niveau 2 - Services metier"
         PROJECT[core-project-service]
         AI[ai-analysis-service]
         PAY[core-payment-service]
@@ -148,11 +148,11 @@ graph LR
         INGEST[content-ingestion-service]
     end
 
-    subgraph "Niveau 3 - Depend de Niveau 2"
+    subgraph "Niveau 3 - Pipeline IA"
         MEDIA[ai-media-generation-service]
     end
 
-    subgraph "Niveau 4 - Depend de Niveau 3"
+    subgraph "Niveau 4 - Assemblage"
         ASSEMBLY[ai-storyboard-assembly-service]
     end
 
@@ -161,10 +161,11 @@ graph LR
         WEB[web-user-portal]
     end
 
-    DB --> USER
-    DB --> STORAGE
-    DB --> SEC
-    DB --> GW
+    PGCRUD -.-> USER
+    PGCRUD -.-> PROJECT
+    PGIO -.-> STORAGE
+    PGIO -.-> AI
+    PGIO -.-> INGEST
 
     USER --> PROJECT
     STORAGE --> PROJECT
@@ -197,7 +198,6 @@ graph LR
 | core-notification-service | 8088 | Node.js/NestJS | core-notification-service |
 | support-storage-service | 8089 | Python/FastAPI | support-storage-service |
 | support-security-service | 8093 | Java/Spring | support-security-service |
-| core-database-service | 8095 | TypeScript/Node.js | core-database-service |
 | web-user-portal | 3000 | TypeScript/Vue.js | web-user-portal |
 | mobile-app | - | Mobile natif | mobile-app |
 

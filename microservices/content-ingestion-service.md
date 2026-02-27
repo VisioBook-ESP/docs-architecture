@@ -50,7 +50,7 @@ graph TB
     subgraph "External"
         STORAGE[support-storage-service]
         AI[ai-analysis-service]
-        DB[core-database-service]
+        PG[(postgres-io<br/>ingestion)]
     end
 
     API --> INGEST
@@ -70,7 +70,7 @@ graph TB
 
     INGEST_SVC --> STORAGE
     TEXT_SVC --> AI
-    CHUNK_SVC --> DB
+    CHUNK_SVC --> PG
 ```
 
 ## Controllers et Endpoints
@@ -154,7 +154,7 @@ class MetadataResponse(BaseModel):
 graph LR
     ING[content-ingestion-service] --> STORAGE[support-storage-service]
     ING --> AI[ai-analysis-service]
-    ING --> DB[core-database-service]
+    ING --> PG[(postgres-io / ingestion)]
 ```
 
 ### Appels entrants
@@ -172,7 +172,7 @@ sequenceDiagram
     participant PS as core-project-service
     participant ING as content-ingestion-service
     participant SS as support-storage-service
-    participant DB as Database
+    participant PG as PostgreSQL (postgres-io)
     participant AI as ai-analysis-service
 
     PS->>ING: POST /ingest<br/>{ fileId, projectId }
@@ -187,7 +187,7 @@ sequenceDiagram
 
     ING->>ING: Chunk text (1000 words)
 
-    ING->>DB: Save chunks + metadata
+    ING->>PG: Save chunks + metadata
     ING->>AI: Notify: content ready
 
     ING-->>PS: { status: "completed", chunks: N }

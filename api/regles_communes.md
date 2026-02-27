@@ -12,7 +12,6 @@ https://api.visiobook.com/core-user-service              # Core User Service
 https://api.visiobook.com/core-project-service           # Core Project Service
 https://api.visiobook.com/support-storage-service        # Support Storage Service
 https://api.visiobook.com/ai-analysis-service            # AI Analysis Service
-https://api.visiobook.com/core-database-service          # Core Database Service
 ```
 
 ### Convention d'URLs de Développement
@@ -21,7 +20,6 @@ http://localhost:8081   # Core User Service
 http://localhost:8086   # Core Project Service
 http://localhost:8089   # Support Storage Service
 http://localhost:8083   # AI Analysis Service
-http://localhost:8084   # Core Database Service
 http://localhost:3000   # Web User Portal
 ```
 
@@ -407,6 +405,48 @@ ai:analysis:{job_id}:v1
 project:list:{user_id}:page1:v1
 storage:files:{project_id}:page1:v1
 ```
+
+## 🗃️ Convention de Connexion Base de Donnees
+
+### Architecture
+
+Les bases de donnees sont gerees par l'operateur CloudNativePG (CNPG) via 2 clusters PostgreSQL. Chaque service se connecte **directement** a sa base via son propre ORM. Il n'y a pas de service intermediaire.
+
+Pour le detail complet, voir [database-infrastructure.md](../microservices/database-infrastructure.md).
+
+### Variables d'Environnement Standard
+
+Chaque service recoit ses credentials via un Secret Kubernetes avec ces variables :
+
+| Variable | Description | Exemple |
+|----------|-------------|---------|
+| `DATABASE_URL` | URL complete de connexion | `postgresql://user:pass@host:5432/db` |
+| `DB_HOST` | Hostname du cluster CNPG | `postgres-crud-rw.visiobook-namespace.svc.cluster.local` |
+| `DB_PORT` | Port PostgreSQL | `5432` |
+| `DB_NAME` | Nom de la base | `core_user` |
+| `DB_USERNAME` | Utilisateur | `core_user_app` |
+| `DB_PASSWORD` | Mot de passe | (dans le secret) |
+
+### Exemples de Connexion
+
+**Python / SQLAlchemy :**
+```python
+from sqlalchemy import create_engine
+import os
+engine = create_engine(os.environ["DATABASE_URL"])
+```
+
+**Node.js / Prisma :**
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+```
+
+### Migrations
+
+Chaque service gere ses propres migrations de schema via son ORM (Alembic, Prisma Migrate, TypeORM migrations, etc.). Les migrations sont executees au demarrage du service ou dans un init container.
 
 ## 🔄 Versioning API
 

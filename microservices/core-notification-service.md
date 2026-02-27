@@ -53,7 +53,7 @@ graph TB
     subgraph "External"
         SENDGRID_API[SendGrid API]
         FIREBASE[Firebase Cloud Messaging]
-        DB[core-database-service]
+        PG[(PostgreSQL<br/>TBD)]
     end
 
     API --> EMAIL
@@ -75,7 +75,7 @@ graph TB
     EMAIL_SVC --> BULL
     PUSH_SVC --> BULL
 
-    INAPP_SVC --> DB
+    INAPP_SVC --> PG
 ```
 
 ## Controllers et Endpoints
@@ -178,7 +178,7 @@ type NotificationType =
 graph LR
     NS[core-notification-service] --> SENDGRID[SendGrid]
     NS --> FCM[Firebase FCM]
-    NS --> DB[core-database-service]
+    NS --> PG[(PostgreSQL<br/>TBD)]
 ```
 
 ### Appels entrants
@@ -200,7 +200,7 @@ sequenceDiagram
     participant BULL as Bull Queue
     participant FCM as Firebase
     participant SENDGRID as SendGrid
-    participant DB as Database
+    participant PG as PostgreSQL
     participant APP as mobile-app
 
     PS->>NS: POST /notifications<br/>{ type: "generation_complete", userId, projectId }
@@ -210,7 +210,7 @@ sequenceDiagram
         BULL->>FCM: Send push
         FCM->>APP: Push notification
     and In-app notification
-        NS->>DB: Save notification
+        NS->>PG: Save notification
     and Email (optionnel)
         NS->>BULL: Queue email job
         BULL->>SENDGRID: Send email

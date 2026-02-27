@@ -54,7 +54,7 @@ graph TB
     end
 
     subgraph "External"
-        DB[core-database-service]
+        PG[(postgres-crud<br/>core_project)]
         STORAGE[support-storage-service]
         AI[ai-analysis-service]
         USER[core-user-service]
@@ -76,7 +76,7 @@ graph TB
     WORKFLOW_SVC --> SM
     WORKFLOW_SVC --> BULL
 
-    PROJECT_SVC --> DB
+    PROJECT_SVC --> PG
     WORKFLOW_SVC --> AI
     CONTENT_SVC --> STORAGE
     PROJECT_SVC --> USER
@@ -377,7 +377,7 @@ export const projectWorkflowMachine = createMachine({
 
 ```mermaid
 graph LR
-    PS[core-project-service] --> DB[core-database-service]
+    PS[core-project-service] --> PG[(postgres-crud / core_project)]
     PS --> STORAGE[support-storage-service]
     PS --> AI[ai-analysis-service]
     PS --> USER[core-user-service]
@@ -386,7 +386,7 @@ graph LR
 
 | Service cible | Endpoint | Objectif |
 |---------------|----------|----------|
-| core-database-service | `/api/v1/query` | CRUD projets |
+| postgres-crud | Connexion directe (ORM) | Base core_project |
 | support-storage-service | `/api/v1/storage/files/*` | Gestion fichiers |
 | ai-analysis-service | `/api/v1/analysis/*` | Lancement analyse/generation |
 | core-user-service | `/api/v1/users/:id/quota` | Verification quotas |
@@ -411,7 +411,7 @@ sequenceDiagram
     participant GW as API Gateway
     participant PS as core-project-service
     participant SS as support-storage-service
-    participant DB as Database
+    participant PG as PostgreSQL (postgres-crud)
     participant US as core-user-service
 
     C->>GW: POST /projects<br/>{ title, sourceType: 'file', sourceFileId }
@@ -423,8 +423,8 @@ sequenceDiagram
     PS->>SS: GET /files/:sourceFileId
     SS-->>PS: File metadata + content
 
-    PS->>DB: INSERT project
-    DB-->>PS: Project created
+    PS->>PG: INSERT project
+    PG-->>PS: Project created
 
     PS-->>GW: 201 Created { project }
     GW-->>C: Response
@@ -492,19 +492,19 @@ sequenceDiagram
 sequenceDiagram
     participant Owner as Project Owner
     participant PS as core-project-service
-    participant DB as Database
+    participant PG as PostgreSQL (postgres-crud)
     participant Viewer as Anonymous Viewer
 
     Owner->>PS: POST /projects/:id/share/link<br/>{ allowDownload: true }
-    PS->>DB: Create share_link record
-    DB-->>PS: ShareLink created
+    PS->>PG: Create share_link record
+    PG-->>PS: ShareLink created
     PS-->>Owner: { shareId, url, expiresAt }
 
     Note over Owner,Viewer: Owner shares URL
 
     Viewer->>PS: GET /projects/share/public/:shareId
-    PS->>DB: Get share_link + project
-    DB-->>PS: ShareLink + Project data
+    PS->>PG: Get share_link + project
+    PG-->>PS: ShareLink + Project data
 
     alt Link valid
         PS-->>Viewer: { project, visioBook, allowDownload }

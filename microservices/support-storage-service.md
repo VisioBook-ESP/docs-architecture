@@ -54,7 +54,7 @@ graph TB
         AZURE_BLOB[Azure Blob Storage]
         AZURE_VISION[Azure Vision API]
         AZURE_CDN[Azure CDN]
-        DB[core-database-service]
+        PG[(postgres-io<br/>storage)]
     end
 
     API --> UPLOAD
@@ -79,7 +79,7 @@ graph TB
     VISION --> AZURE_VISION
     CDN --> AZURE_CDN
 
-    FILE_SVC --> DB
+    FILE_SVC --> PG
 ```
 
 ## Controllers et Endpoints
@@ -323,7 +323,7 @@ graph LR
     SS[support-storage-service] --> BLOB[Azure Blob Storage]
     SS --> VISION[Azure Vision API]
     SS --> CDN[Azure CDN]
-    SS --> DB[core-database-service]
+    SS --> PG[(postgres-io / storage)]
 ```
 
 | Service cible | Endpoint | Objectif |
@@ -331,7 +331,7 @@ graph LR
 | Azure Blob Storage | SDK | Stockage fichiers |
 | Azure Vision API | `/vision/v3.2/ocr` | Extraction texte OCR |
 | Azure CDN | SDK | Streaming video |
-| core-database-service | `/api/v1/query` | Metadata fichiers |
+| postgres-io | Connexion directe (ORM) | Base storage |
 
 ### Appels entrants
 
@@ -356,7 +356,7 @@ sequenceDiagram
     participant SS as support-storage-service
     participant BLOB as Azure Blob
     participant VISION as Azure Vision
-    participant DB as Database
+    participant PG as PostgreSQL (postgres-io)
 
     C->>GW: POST /storage/upload<br/>(multipart/form-data)
     GW->>SS: Forward file
@@ -370,8 +370,8 @@ sequenceDiagram
         SS->>BLOB: Upload thumbnail
     end
 
-    SS->>DB: Save file metadata
-    DB-->>SS: Metadata saved
+    SS->>PG: Save file metadata
+    PG-->>SS: Metadata saved
 
     SS-->>GW: { fileId, url, ... }
     GW-->>C: Response
@@ -387,7 +387,7 @@ sequenceDiagram
     SS->>VISION: POST /vision/v3.2/ocr
     VISION-->>SS: OCR result
 
-    SS->>DB: Save OCR result
+    SS->>PG: Save OCR result
     SS-->>GW: { text, confidence, ... }
     GW-->>C: OCR Response
 ```

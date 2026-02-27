@@ -21,7 +21,7 @@ considérer :
 
 Ces deux dimensions se combinent pour créer **4 patterns possibles**. Ce
 document analyse toutes ces combinaisons pour vous aider à choisir la meilleure
-approche pour votre service de base de données centralisé.
+approche pour vos microservices.
 
 ## Matrice Complète des Possibilités
 
@@ -199,9 +199,9 @@ graph TB
 
 ```mermaid
 graph LR
-    subgraph "core-database-service/"
-        A[src/] --> A1[Code TypeScript]
-        B[helm/] --> B1[Chart.yaml]
+    subgraph "microservice-example/"
+        A[src/] --> A1[Code applicatif]
+        B[charts/] --> B1[Chart.yaml]
         B --> B2[values.yaml]
         B --> B3[templates/]
         B3 --> B4[deployment.yaml]
@@ -288,7 +288,7 @@ graph TD
         C[values.yaml] --> C1[Default Values]
     end
 
-    subgraph "core-database-service/"
+    subgraph "microservice-example/"
         D[src/] --> D1[Application Code]
         E[values/] --> E1[dev-values.yaml]
         E --> E2[prod-values.yaml]
@@ -403,7 +403,7 @@ graph TD
 
 ### Recommandation Spécifique pour Votre Contexte
 
-**Votre service de base de données centralisé** a des besoins particuliers :
+**Vos microservices** ont des besoins particuliers :
 
 ```mermaid
 graph LR
@@ -534,30 +534,16 @@ graph TD
 2. **Patterns communs** : Extraction vers une librairie partagée
 3. **Évolution** : Migration progressive vers centralisation
 
-### Configuration Spécifique Database Service
+### Configuration Base de Donnees
+
+Les bases de donnees sont gerees par l'operateur CloudNativePG (CNPG) via des clusters PostgreSQL Kubernetes. Chaque service se connecte directement a sa base via son ORM et une `DATABASE_URL` fournie par un Secret Kubernetes. Voir [database-infrastructure.md](../microservices/database-infrastructure.md) pour le detail complet.
 
 ```yaml
-# values.yaml - Configuration service-specific
-database:
-  type: 'postgresql'
-  consolidation:
-    enabled: true
-    sources:
-      - nestjs-services
-      - fastapi-services
-      - go-services
-
-istio:
-  virtualService:
-    routes:
-      - match: '/api/v1/databases/*'
-        destination: 'core-database-service'
-  destinationRule:
-    trafficPolicy:
-      circuitBreaker:
-        enabled: true
-      retries:
-        attempts: 3
+# Exemple : values.yaml d'un service avec base de donnees
+existingSecret: "postgres-crud-user-secret"
+env:
+  ENV: prod
+  LOG_LEVEL: warn
 ```
 
 ## Stratégie de Migration
@@ -600,7 +586,7 @@ gantt
 
 ## Conclusion
 
-Pour votre service de base de données centralisé, l'approche **hybride** offre
+Pour vos microservices, l'approche **hybride** offre
 le meilleur équilibre entre vélocité de développement et gouvernance à long
 terme. Commencez par des charts par service pour itérer rapidement, puis évoluez
 vers une centralisation progressive basée sur les patterns éprouvés.

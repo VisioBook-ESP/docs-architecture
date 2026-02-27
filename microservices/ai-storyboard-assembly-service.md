@@ -50,7 +50,7 @@ graph TB
 
     subgraph "External"
         STORAGE[support-storage-service]
-        DB[core-database-service]
+        PG[(PostgreSQL<br/>TBD)]
         PROJECT[core-project-service]
     end
 
@@ -73,7 +73,7 @@ graph TB
 
     ASSEMBLY_SVC --> STORAGE
     EXPORT_SVC --> STORAGE
-    TIMELINE_SVC --> DB
+    TIMELINE_SVC --> PG
 ```
 
 ## Controllers et Endpoints
@@ -422,14 +422,14 @@ class StreamService {
 ```mermaid
 graph LR
     ASM[ai-storyboard-assembly-service] --> STORAGE[support-storage-service]
-    ASM --> DB[core-database-service]
+    ASM --> PG[(PostgreSQL<br/>TBD)]
     ASM --> PROJECT[core-project-service]
 ```
 
 | Service cible | Endpoint | Objectif |
 |---------------|----------|----------|
 | support-storage-service | `/api/v1/storage/*` | Upload video finale, recuperation assets |
-| core-database-service | `/api/v1/query` | Metadata video |
+| PostgreSQL (TBD) | Connexion directe (ORM) | Metadata video (voir database-infrastructure.md) |
 | core-project-service | `/api/v1/projects/:id` | Callback completion |
 
 ### Appels entrants

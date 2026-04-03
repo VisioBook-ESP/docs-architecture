@@ -689,101 +689,60 @@ X-Client-Version: <client_version>
 
 ### Workflow Management
 
-#### GET /api/v1/projects/{project_id}/workflows
-**Description** : Liste des workflows d'un projet
+> **Note**: Les workflows sont lies a une version de projet, pas au projet directement. Chaque version peut avoir ses propres executions de workflow.
 
-**Permissions** : user, premium, admin (propriétaire de la ressource ou admin)
+#### POST /api/v1/projects/{projectId}/versions/{versionId}/workflow/start
+**Description** : Demarrer un nouveau workflow de generation
 
-**Réponse** :
+**Auth** : x-user-id (via Istio gateway)
+
+**Reponse (201)** :
 ```json
 {
-  "workflows": [
-    {
-      "id": "workflow_123456789",
-      "type": "full_generation",
-      "status": "completed",
-      "current_step": "generation_complete",
-      "progress_percent": 100,
-      "started_at": "2024-01-15T10:00:00Z",
-      "completed_at": "2024-01-15T10:30:00Z",
-      "duration_ms": 1800000,
-      "steps": [
-        {
-          "name": "content_analysis",
-          "status": "completed",
-          "duration_ms": 45000,
-          "result": "success"
-        },
-        {
-          "name": "scene_extraction",
-          "status": "completed",
-          "duration_ms": 120000,
-          "result": "success"
-        },
-        {
-          "name": "image_generation",
-          "status": "completed",
-          "duration_ms": 900000,
-          "result": "success"
-        }
-      ]
-    }
-  ],
-  "current_workflow": {
-    "id": "workflow_987654321",
-    "status": "running",
-    "progress_percent": 45,
-    "estimated_completion": "2024-01-15T11:45:00Z"
-  }
+  "executionId": "uuid",
+  "status": "analyzing",
+  "projectId": "uuid",
+  "versionId": "uuid"
 }
 ```
 
-#### POST /api/v1/projects/{project_id}/workflows
-**Description** : Démarrage d'un nouveau workflow
+#### GET /api/v1/projects/{projectId}/versions/{versionId}/workflow/status/{executionId}
+**Description** : Statut d'une execution de workflow
 
-**Permissions** : user, premium, admin (propriétaire de la ressource ou admin)
+**Auth** : x-user-id (via Istio gateway)
 
-**Requête** :
+**Reponse (200)** :
 ```json
 {
-  "workflow_type": "regenerate_images",
-  "parameters": {
-    "style": "cartoon",
-    "quality": "high",
-    "scenes": ["scene_1", "scene_3"]
-  },
-  "priority": "normal"
+  "executionId": "uuid",
+  "status": "analyzing",
+  "step": "analysis",
+  "progress": 45,
+  "startedAt": "2026-04-02T15:00:00Z",
+  "completedAt": null,
+  "error": null
 }
 ```
 
-**Réponse** :
-```json
-{
-  "workflow": {
-    "id": "workflow_new456",
-    "type": "regenerate_images",
-    "status": "queued",
-    "queue_position": 3,
-    "estimated_start": "2024-01-15T11:35:00Z",
-    "estimated_completion": "2024-01-15T12:00:00Z",
-    "parameters": {
-      "style": "cartoon",
-      "quality": "high",
-      "scenes": ["scene_1", "scene_3"]
-    }
-  },
-  "cost_estimate": {
-    "credits": 150,
-    "currency": "EUR",
-    "amount": 15.00
-  }
-}
-```
+**Statuts possibles** : `draft` → `analyzing` → `analyzed` → `generating` → `completed` | `failed` | `cancelled`
 
-#### GET /api/v1/projects/{project_id}/workflows/{workflow_id}
-**Description** : Détails d'un workflow spécifique
+#### POST /api/v1/projects/{projectId}/versions/{versionId}/workflow/cancel/{executionId}
+**Description** : Annuler un workflow en cours
 
-**Permissions** : user, premium, admin (propriétaire de la ressource ou admin)
+**Auth** : x-user-id (via Istio gateway)
+
+#### POST /api/v1/projects/{projectId}/versions/{versionId}/workflow/retry/{executionId}
+**Description** : Relancer un workflow echoue
+
+**Auth** : x-user-id (via Istio gateway)
+
+**Reponse (202)** : Nouvelle execution creee.
+
+---
+
+> **Anciens endpoints (deprecies)** : Les endpoints `/api/v1/projects/{project_id}/workflows` et `/api/v1/projects/{project_id}/workflows/{workflow_id}` decrits precedemment sont remplaces par les endpoints versiones ci-dessus.
+
+#### _(Ancien) GET /api/v1/projects/{project_id}/workflows/{workflow_id} — DEPRECIE_
 
 **Réponse** :
 ```json

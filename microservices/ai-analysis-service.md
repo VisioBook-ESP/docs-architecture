@@ -6,7 +6,7 @@
 |-----------|--------|
 | **Repository** | ai-analysis-service |
 | **Port** | 8083 |
-| **Stack** | Python / FastAPI / PyTorch |
+| **Stack** | Python 3.12 / FastAPI / vLLM (Ministral 3B) / spaCy |
 | **Phase** | 3 - Services Metier |
 | **Priorite** | PRIORITE IA (coeur valeur metier) |
 
@@ -14,346 +14,225 @@
 
 | Flow | Role | Responsabilite |
 |------|------|----------------|
-| **Flow 5: Generation** | **Owner** | Orchestration complete du pipeline IA |
+| **Flow 5: Generation** | **Analyse** | Analyse semantique du texte (scenes, personnages, narratif, resume) |
 
-### Sous-phases du Flow 5
-
-| Phase | Progression | Description |
-|-------|-------------|-------------|
-| Phase 1 | 0-20% | Analyse semantique du texte |
-| Phase 2 | 20-60% | Generation des images (deleguee a media-generation) |
-| Phase 3 | 60-80% | Synthese audio (deleguee a media-generation) |
-| Phase 4 | 80-100% | Assemblage video (deleguee a storyboard-assembly) |
+> **Note**: Ce service ne gere que l'etape d'analyse (phase 1 du pipeline). La generation d'images, audio et assemblage sont delegues a d'autres services via NATS.
 
 ## Architecture interne
 
 ```mermaid
 graph TB
     subgraph "ai-analysis-service"
-        API[FastAPI App]
+        API[FastAPI App<br/>Port 8083]
 
-        subgraph "Controllers (Routers)"
-            ANALYSIS[AnalysisController<br/>/analysis/*]
-            JOB[JobController<br/>/jobs/*]
-            MODEL[ModelController<br/>/models/*]
+        subgraph "Routes"
+            ANALYZE[/api/v1/analyze<br/>POST async + batch]
+            RESULTS[/api/v1/results<br/>GET stored results]
+            JOBS[/api/v1/jobs<br/>GET job status]
+            HEALTH[/health + /ready + /metrics]
         end
 
-        subgraph "Services"
-            SEMANTIC[SemanticAnalysisService]
-            SCENE[SceneExtractionService]
-            CHARACTER[CharacterExtractionService]
-            SUMMARY[SummarizationService]
+        subgraph "Processing Pipeline"
+            PREPROCESS[TextPreprocessor<br/>spaCy + langdetect]
+            LLM[LLMClient<br/>httpx → vLLM]
+            PARSER[ResponseParser<br/>JSON validation]
         end
 
-        subgraph "AI Models"
-            BERT[BERT/RoBERTa<br/>Analyse semantique]
-            NER[spaCy NER<br/>Extraction entites]
-            T5[T5/PEGASUS<br/>Resume]
-            EMB[Sentence Transformers<br/>Embeddings]
+        subgraph "Messaging"
+            NATS_SUB[NATS Subscriber<br/>workflow.started]
+            NATS_PUB[NATS Publisher<br/>analysis.completed/failed]
+            HANDLER[WorkflowHandler]
         end
 
-        subgraph "Queue"
-            CELERY[Celery Workers]
+        subgraph "Persistence"
+            DB_CLIENT[DatabaseClient<br/>SQLAlchemy + asyncpg]
         end
     end
 
     subgraph "External"
+        VLLM[vLLM Server<br/>Ministral 3B<br/>Tailscale VPN]
         PG[(postgres-io<br/>analysis)]
-        STORAGE[support-storage-service]
-        MEDIA[ai-media-generation-service]
-        ASSEMBLY[ai-storyboard-assembly-service]
-        PROJECT[core-project-service]
+        NATS[NATS JetStream<br/>VISIOBOOK_PROJECT]
     end
 
-    API --> ANALYSIS
-    API --> JOB
-    API --> MODEL
+    API --> ANALYZE
+    API --> RESULTS
+    API --> JOBS
+    API --> HEALTH
 
-    ANALYSIS --> SEMANTIC
-    ANALYSIS --> SCENE
-    ANALYSIS --> CHARACTER
-    ANALYSIS --> SUMMARY
+    NATS_SUB --> HANDLER
+    HANDLER --> PREPROCESS
+    HANDLER --> LLM
+    HANDLER --> PARSER
+    HANDLER --> DB_CLIENT
+    HANDLER --> NATS_PUB
 
-    SEMANTIC --> BERT
-    SCENE --> NER
-    CHARACTER --> NER
-    SUMMARY --> T5
+    ANALYZE --> PREPROCESS
+    ANALYZE --> LLM
+    ANALYZE --> PARSER
 
-    SEMANTIC --> EMB
-
-    CELERY --> SEMANTIC
-    CELERY --> SCENE
-
-    SEMANTIC --> PG
-    SCENE --> MEDIA
-    CELERY --> PROJECT
+    LLM --> VLLM
+    DB_CLIENT --> PG
+    NATS_SUB --> NATS
+    NATS_PUB --> NATS
 ```
+
+## Pipeline de traitement
+
+Le texte passe par 4 etapes:
+
+| Etape | Composant | Description | Duree |
+|-------|-----------|-------------|-------|
+| 1. Preprocessing | `TextPreprocessor` (spaCy) | Detection langue, nettoyage Unicode, masquage PII, segmentation en phrases, chunking avec overlap | ~50-500ms |
+| 2. LLM Call | `LLMClient` (httpx) | Envoi au serveur vLLM (Ministral 3B) via API OpenAI-compatible | ~10-120s |
+| 3. Parsing | `ResponseParser` | Validation JSON, normalisation champs manquants, extraction fallback | ~5ms |
+| 4. Persistence | `DatabaseClient` | Upsert dans `analysis_results` (PostgreSQL) | ~10ms |
+
+### Preprocessing (spaCy)
+
+- **Modeles**: `fr_core_news_lg` (francais), `en_core_web_lg` (anglais)
+- **Detection langue**: `langdetect` → choix automatique du modele spaCy
+- **PII masking**: emails, telephones, IBANs → `***`
+- **Segmentation**: spaCy sentencizer → phrases
+- **Chunking**: max 512 tokens, overlap 64 tokens (pour contexte LLM)
+
+### LLM (vLLM)
+
+- **Modele**: `mistralai/Ministral-3-3B-Instruct-2512-BF16`
+- **Serveur**: vLLM avec API OpenAI-compatible (Tailscale VPN)
+- **Temperature**: 0.1 (deterministe)
+- **Max tokens**: 4096
+- **Timeout**: 120s
+- **Output**: JSON structure (scenes, personnages, narratif, sentiment, resume)
 
 ## Controllers et Endpoints
 
-### AnalysisController (`/api/v1/analysis`)
+### Analysis (`/api/v1`)
 
 | Methode | Endpoint | Description | Auth |
 |---------|----------|-------------|------|
-| POST | `/semantic` | Analyse semantique complete | Oui |
-| POST | `/extract-scenes` | Extraction des scenes | Oui |
-| POST | `/extract-characters` | Extraction personnages | Oui |
-| POST | `/summarize` | Generation resume | Oui |
-| POST | `/embeddings` | Generation embeddings | Oui |
+| POST | `/analyze` | Analyse asynchrone (retourne job_id, status 202) | x-user-id |
+| POST | `/analyze/batch` | Analyse synchrone batch (max 50 textes) | x-user-id |
+| GET | `/jobs/{job_id}` | Status d'un job (pending/processing/completed/failed) | x-user-id |
 
-```python
-# POST /api/v1/analysis/semantic
-class SemanticAnalysisRequest(BaseModel):
-    projectId: str
-    text: str
-    language: str = "fr"
-    options: Optional[AnalysisOptions] = None
-
-class AnalysisOptions(BaseModel):
-    extractScenes: bool = True
-    extractCharacters: bool = True
-    generateSummary: bool = True
-    maxScenes: int = 20
-    minSceneLength: int = 50
-
-class SemanticAnalysisResponse(BaseModel):
-    jobId: str
-    status: Literal["queued", "processing", "completed", "failed"]
-    result: Optional[AnalysisResult]
-
-class AnalysisResult(BaseModel):
-    scenes: List[Scene]
-    characters: List[Character]
-    summary: str
-    metadata: AnalysisMetadata
-
-class Scene(BaseModel):
-    id: str
-    order: int
-    text: str
-    startPosition: int
-    endPosition: int
-    sentiment: Literal["positive", "negative", "neutral"]
-    intensity: float  # 0-1
-    imagePrompt: str  # Generated prompt for image generation
-
-class Character(BaseModel):
-    id: str
-    name: str
-    aliases: List[str]
-    description: str
-    appearances: List[str]  # Scene IDs
-    traits: List[str]
-
-class AnalysisMetadata(BaseModel):
-    wordCount: int
-    sentenceCount: int
-    averageSentenceLength: float
-    readingTime: int  # minutes
-    dominantSentiment: str
-    processingTime: float  # seconds
-```
-
-### JobController (`/api/v1/jobs`)
+### Results (`/api/v1/results`)
 
 | Methode | Endpoint | Description | Auth |
 |---------|----------|-------------|------|
-| GET | `/` | Lister jobs utilisateur | Oui |
-| GET | `/:jobId` | Status d'un job | Oui |
-| POST | `/:jobId/cancel` | Annuler un job | Oui |
-| GET | `/:jobId/result` | Resultat d'un job | Oui |
+| GET | `/{execution_id}` | Resultat d'analyse persiste (par execution workflow) | x-user-id |
+| GET | `/project/{project_id}` | Liste des analyses d'un projet | x-user-id |
 
-```python
-# GET /api/v1/jobs/:jobId
-class JobStatus(BaseModel):
-    jobId: str
-    type: Literal["analysis", "generation"]
-    status: Literal["queued", "processing", "completed", "failed", "cancelled"]
-    progress: int  # 0-100
-    currentStep: Optional[str]
-    createdAt: datetime
-    startedAt: Optional[datetime]
-    completedAt: Optional[datetime]
-    error: Optional[str]
-```
-
-### ModelController (`/api/v1/models`)
+### Health
 
 | Methode | Endpoint | Description | Auth |
 |---------|----------|-------------|------|
-| GET | `/` | Liste des modeles | Oui |
-| GET | `/:modelId/status` | Status d'un modele | Oui |
-| POST | `/:modelId/load` | Charger un modele | Admin |
-| POST | `/:modelId/unload` | Decharger un modele | Admin |
+| GET | `/health` | Liveness (toujours 200) | Non |
+| GET | `/ready` | Readiness (verifie vLLM + DB) | Non |
+| GET | `/metrics` | CPU, RAM, disque | Non |
 
-```python
-# GET /api/v1/models
-class ModelInfo(BaseModel):
-    id: str
-    name: str
-    type: Literal["nlp", "embedding", "summarization"]
-    status: Literal["loaded", "unloaded", "loading", "error"]
-    memoryUsage: int  # MB
-    gpuMemory: Optional[int]  # MB
-    lastUsed: datetime
+## Base de donnees
+
+### Cluster: postgres-io / Database: analysis
+
+| Table | Description |
+|-------|-------------|
+| `analysis_results` | Resultats d'analyse persistes |
+
+### Table: `analysis_results`
+
+| Colonne | Type | Notes |
+|---------|------|-------|
+| id | UUID | PK, auto-generated |
+| project_id | VARCHAR(255) | Indexe |
+| version_id | VARCHAR(255) | Indexe |
+| execution_id | VARCHAR(255) | Index unique |
+| user_id | VARCHAR(255) | Indexe |
+| status | VARCHAR(50) | `completed` ou `failed` |
+| scenes | JSONB | Scenes extraites (format core-project-service) |
+| characters | JSONB | Personnages extraits |
+| narrative | JSONB | Analyse narrative (nullable) |
+| sentiment | JSONB | Analyse sentiment (nullable) |
+| summary | JSONB | Resume (nullable) |
+| text_stats | JSONB | Statistiques texte (nullable) |
+| language | VARCHAR(10) | Langue detectee |
+| processing_time_ms | FLOAT | Duree traitement |
+| error | TEXT | Message erreur si echec (nullable) |
+| correlation_id | VARCHAR(255) | Tracabilite |
+| created_at | TIMESTAMP(tz) | Auto |
+| updated_at | TIMESTAMP(tz) | Auto on update |
+
+**Migrations**: Alembic (`alembic/versions/001_create_analysis_results.py`)
+
+## Communications NATS JetStream
+
+### Stream: `VISIOBOOK_PROJECT`
+
+### Evenements recus (subscribe)
+
+| Sujet | Consumer durable | Description |
+|-------|-----------------|-------------|
+| `visiobook.project.workflow.started` | `ai-analysis-workflow-started` | Declenchement analyse par core-project-service |
+
+**Payload recu:**
+```json
+{
+  "projectId": "uuid",
+  "versionId": "uuid",
+  "executionId": "uuid",
+  "userId": "uuid",
+  "contentText": "Texte complet a analyser...",
+  "config": { "language": "fr", "style": "realistic" },
+  "correlationId": "uuid"
+}
 ```
 
-## Methodes et Fonctions
+### Evenements emis (publish)
 
-### SemanticAnalysisService
+| Sujet | Description |
+|-------|-------------|
+| `visiobook.ai.analysis.completed` | Analyse terminee avec scenes + personnages |
+| `visiobook.ai.analysis.failed` | Echec analyse avec message erreur |
+| `visiobook.ai.progress` | Progression (0%, 10%, 80%, 100%) |
 
-```python
-class SemanticAnalysisService:
-    def __init__(
-        self,
-        bert_model: BertModel,
-        scene_extractor: SceneExtractionService,
-        character_extractor: CharacterExtractionService,
-        summarizer: SummarizationService
-    ):
-        self.bert = bert_model
-        self.scene_extractor = scene_extractor
-        self.character_extractor = character_extractor
-        self.summarizer = summarizer
-
-    async def analyze(
-        self,
-        text: str,
-        language: str,
-        options: AnalysisOptions
-    ) -> AnalysisResult:
-        """Analyse semantique complete d'un texte"""
-
-        # 1. Preprocessing
-        sentences = self._tokenize_sentences(text)
-        embeddings = await self._generate_embeddings(sentences)
-
-        # 2. Extraction des scenes
-        scenes = await self.scene_extractor.extract(
-            text, embeddings, options.maxScenes
-        )
-
-        # 3. Extraction des personnages
-        characters = await self.character_extractor.extract(text, scenes)
-
-        # 4. Generation du resume
-        summary = await self.summarizer.summarize(text, scenes)
-
-        # 5. Generation des prompts pour images
-        for scene in scenes:
-            scene.imagePrompt = await self._generate_image_prompt(
-                scene, characters
-            )
-
-        return AnalysisResult(
-            scenes=scenes,
-            characters=characters,
-            summary=summary,
-            metadata=self._compute_metadata(text, sentences)
-        )
-
-    async def _generate_image_prompt(
-        self,
-        scene: Scene,
-        characters: List[Character]
-    ) -> str:
-        """Generer un prompt optimise pour Stable Diffusion"""
-        # Identifier les personnages dans la scene
-        scene_characters = [c for c in characters if scene.id in c.appearances]
-
-        # Construire le prompt
-        prompt_parts = [
-            f"Scene: {scene.text[:200]}",
-            f"Style: illustration, detailed, high quality",
-            f"Characters: {', '.join(c.name for c in scene_characters)}"
-        ]
-
-        return " | ".join(prompt_parts)
+**Payload `analysis.completed`:**
+```json
+{
+  "projectId": "uuid",
+  "versionId": "uuid",
+  "executionId": "uuid",
+  "userId": "uuid",
+  "scenes": [
+    {
+      "order": 0,
+      "text": "extrait de texte",
+      "description": "titre scene",
+      "imagePrompt": "prompt detaille pour generation image",
+      "duration": 5,
+      "sentiment": "mysterious"
+    }
+  ],
+  "characters": [
+    {
+      "name": "Alice",
+      "description": "protagonist. jeune fille",
+      "aliases": [],
+      "traits": ["brave", "curious"]
+    }
+  ],
+  "correlationId": "uuid"
+}
 ```
 
-### SceneExtractionService
-
-```python
-class SceneExtractionService:
-    async def extract(
-        self,
-        text: str,
-        embeddings: np.ndarray,
-        max_scenes: int
-    ) -> List[Scene]:
-        """Extraire les scenes d'un texte"""
-
-        # 1. Segmentation semantique
-        # Utiliser les embeddings pour detecter les changements de contexte
-        boundaries = self._detect_scene_boundaries(embeddings)
-
-        # 2. Extraction des segments
-        segments = self._split_text(text, boundaries)
-
-        # 3. Analyse du sentiment par segment
-        scenes = []
-        for i, segment in enumerate(segments[:max_scenes]):
-            sentiment = await self._analyze_sentiment(segment)
-            scenes.append(Scene(
-                id=f"scene-{i+1}",
-                order=i,
-                text=segment,
-                sentiment=sentiment["label"],
-                intensity=sentiment["score"]
-            ))
-
-        return scenes
-
-    def _detect_scene_boundaries(self, embeddings: np.ndarray) -> List[int]:
-        """Detecter les changements de scene via cosine similarity"""
-        similarities = []
-        for i in range(len(embeddings) - 1):
-            sim = cosine_similarity(
-                embeddings[i].reshape(1, -1),
-                embeddings[i + 1].reshape(1, -1)
-            )[0][0]
-            similarities.append(sim)
-
-        # Trouver les points de changement (faible similarite)
-        threshold = np.percentile(similarities, 20)
-        boundaries = [i for i, sim in enumerate(similarities) if sim < threshold]
-
-        return boundaries
-```
-
-### CharacterExtractionService
-
-```python
-class CharacterExtractionService:
-    def __init__(self):
-        self.nlp = spacy.load("fr_core_news_lg")
-
-    async def extract(
-        self,
-        text: str,
-        scenes: List[Scene]
-    ) -> List[Character]:
-        """Extraire les personnages du texte"""
-
-        # 1. NER pour trouver les entites PERSON
-        doc = self.nlp(text)
-        person_entities = [ent for ent in doc.ents if ent.label_ == "PER"]
-
-        # 2. Grouper les mentions (coreference)
-        characters = self._group_mentions(person_entities)
-
-        # 3. Enrichir avec descriptions
-        for char in characters:
-            char.description = await self._extract_description(text, char.name)
-            char.appearances = self._find_appearances(char, scenes)
-
-        return characters
-
-    def _group_mentions(self, entities) -> List[Character]:
-        """Grouper les differentes mentions d'un meme personnage"""
-        # Utiliser similarite de string pour grouper
-        # "Jean", "M. Dupont", "le professeur" -> meme personnage
-        pass
+**Payload `analysis.failed`:**
+```json
+{
+  "projectId": "uuid",
+  "versionId": "uuid",
+  "executionId": "uuid",
+  "userId": "uuid",
+  "error": "LLM analysis failed: timeout",
+  "correlationId": "uuid"
+}
 ```
 
 ## Communications Inter-services
@@ -363,244 +242,97 @@ class CharacterExtractionService:
 ```mermaid
 graph LR
     AI[ai-analysis-service] --> PG[(postgres-io / analysis)]
-    AI --> STORAGE[support-storage-service]
-    AI --> MEDIA[ai-media-generation-service]
-    AI --> PROJECT[core-project-service]
+    AI --> VLLM[vLLM Server<br/>Tailscale VPN]
+    AI --> NATS[NATS JetStream]
 ```
 
-| Service cible | Endpoint | Objectif |
-|---------------|----------|----------|
-| postgres-io | Connexion directe (ORM) | Base analysis |
-| support-storage-service | `/api/v1/storage/files` | Recuperation contenu |
-| ai-media-generation-service | `/api/v1/generation/*` | Delegation generation images/audio |
-| core-project-service | `/api/v1/projects/:id` | Callbacks progression |
+| Cible | Protocole | Objectif |
+|-------|-----------|----------|
+| postgres-io (analysis) | SQLAlchemy + asyncpg | Persistance resultats |
+| vLLM (Ministral 3B) | HTTP (httpx) | Appel LLM pour analyse |
+| NATS JetStream | nats-py | Pub/sub evenements workflow |
 
 ### Appels entrants
 
-```mermaid
-graph RL
-    PROJECT[core-project-service] -->|"Lancement analyse"| AI[ai-analysis-service]
-    MOBILE[mobile-app] -->|"Status polling"| AI
-    WEB[web-user-portal] -->|"Status polling"| AI
-```
+| Source | Protocole | Description |
+|--------|-----------|-------------|
+| core-project-service | NATS (`workflow.started`) | Declenchement analyse |
+| Mobile/Web (via gateway) | HTTP (`/analyze`, `/results`) | Analyse directe + consultation |
 
-## Diagrammes de sequence
+## Diagramme de sequence
 
-### Sequence: Analyse semantique complete
+### Analyse via NATS (flow principal)
 
 ```mermaid
 sequenceDiagram
-    participant PS as core-project-service
+    participant CPS as core-project-service
+    participant NATS as NATS JetStream
     participant AI as ai-analysis-service
-    participant CELERY as Celery Worker
-    participant GPU as GPU (Models)
+    participant VLLM as vLLM (Ministral 3B)
     participant PG as PostgreSQL (postgres-io)
 
-    PS->>AI: POST /analysis/semantic<br/>{ projectId, text }
-    AI->>AI: Validate request
-    AI->>CELERY: Queue analysis job
-    AI-->>PS: { jobId, status: "queued" }
+    CPS->>NATS: publish workflow.started<br/>{ contentText, config }
+    NATS->>AI: deliver to consumer
 
-    CELERY->>GPU: Load BERT model
-    GPU-->>CELERY: Model ready
+    AI->>NATS: publish ai.progress (0%)
 
-    rect rgb(230, 240, 255)
-        Note over CELERY,GPU: Tokenization & Embeddings
-        CELERY->>GPU: Generate embeddings
-        GPU-->>CELERY: Sentence embeddings
-    end
+    AI->>AI: Preprocessing (spaCy)<br/>langue, PII, chunking
+    AI->>NATS: publish ai.progress (10%)
 
-    rect rgb(255, 240, 230)
-        Note over CELERY,GPU: Scene Extraction
-        CELERY->>GPU: Detect boundaries
-        GPU-->>CELERY: Scene segments
-        CELERY->>GPU: Sentiment analysis
-        GPU-->>CELERY: Sentiments per scene
-    end
+    AI->>VLLM: POST /v1/chat/completions<br/>{ text, system_prompt }
+    VLLM-->>AI: JSON response<br/>{ scenes, characters, narrative }
 
-    rect rgb(240, 255, 230)
-        Note over CELERY,GPU: Character Extraction
-        CELERY->>GPU: NER extraction
-        GPU-->>CELERY: Person entities
-        CELERY->>CELERY: Group mentions
-    end
+    AI->>NATS: publish ai.progress (80%)
 
-    rect rgb(255, 230, 240)
-        Note over CELERY,GPU: Summarization
-        CELERY->>GPU: T5 summarize
-        GPU-->>CELERY: Summary text
-    end
-
-    CELERY->>PG: Save analysis result
-    CELERY->>PS: Callback: analysis complete
-
-    PS->>AI: GET /jobs/:jobId/result
-    AI->>PG: Get result
-    AI-->>PS: { scenes, characters, summary }
+    AI->>AI: Parse + validate response
+    AI->>PG: INSERT analysis_results
+    AI->>NATS: publish analysis.completed<br/>{ scenes, characters }
+    AI->>NATS: publish ai.progress (100%)
 ```
 
-### Sequence: Generation images avec callbacks
+## Authentification
 
-```mermaid
-sequenceDiagram
-    participant AI as ai-analysis-service
-    participant MEDIA as ai-media-generation-service
-    participant PS as core-project-service
+- **Pas de validation JWT** dans le service
+- **Istio ingress gateway** valide le JWT et injecte `x-user-id`
+- `GatewayAuthGuard` (FastAPI dependency `get_current_user`) rejette les requetes sans `x-user-id`
+- **Retourne 404 (pas 403)** pour les ressources non-possedees (anti-enumeration)
 
-    AI->>MEDIA: POST /generation/images<br/>{ scenes, style }
-    MEDIA-->>AI: { jobId }
+## Deploiement
 
-    loop For each scene
-        MEDIA->>AI: POST /callback/progress<br/>{ scene: N, progress: X }
-        AI->>PS: Forward progress update
-    end
+### Docker
 
-    MEDIA->>AI: POST /callback/complete<br/>{ images }
-    AI-->>PS: Images generation complete
-```
+- **Image**: `ghcr.io/visiobook-esp/ai-analysis-service-dev`
+- **Workers**: 1 (single uvicorn worker — requis pour NATS durable consumer)
+- **Startup**: `alembic upgrade head` → `uvicorn src.api.app:app`
+- **spaCy models**: `fr_core_news_lg` + `en_core_web_lg` (telecharges au build)
 
-## Mocks pour tests
+### Helm / Kubernetes
 
-### Mock GPU Models
+- **Istio**: sidecar injection + mTLS
+- **NATS bypass**: `traffic.sidecar.istio.io/excludeOutboundPorts: "4222"` (port NATS exclu du sidecar)
+- **Service**: NodePort (port 80 → container 8083, nodePort 30083)
 
-```python
-# tests/mocks/models_mock.py
-class MockBertModel:
-    def encode(self, sentences: List[str]) -> np.ndarray:
-        """Retourner des embeddings pre-calcules"""
-        return np.random.rand(len(sentences), 768)
+### Variables d'environnement
 
-    def predict_sentiment(self, text: str) -> dict:
-        return {
-            "label": "positive",
-            "score": 0.85
-        }
-
-class MockT5Model:
-    def summarize(self, text: str, max_length: int = 150) -> str:
-        return "Resume genere par le mock pour les tests."
-
-class MockSpacyNLP:
-    def __call__(self, text: str):
-        return MockDoc([
-            MockEntity("Jean", "PER"),
-            MockEntity("Paris", "LOC"),
-        ])
-
-# Fixtures pytest
-@pytest.fixture
-def mock_bert():
-    return MockBertModel()
-
-@pytest.fixture
-def mock_t5():
-    return MockT5Model()
-
-@pytest.fixture
-def mock_nlp():
-    return MockSpacyNLP()
-```
-
-### Mock Media Generation Service
-
-```python
-# tests/mocks/media_generation_mock.py
-class MockMediaGenerationClient:
-    async def generate_images(self, scenes: List[Scene], style: str) -> List[str]:
-        """Retourner des URLs d'images mockees"""
-        return [
-            f"https://mock-storage.com/image_{scene.id}.png"
-            for scene in scenes
-        ]
-
-    async def generate_audio(self, text: str, voice: str) -> str:
-        return "https://mock-storage.com/narration.mp3"
-```
-
-## Configuration GPU
-
-```python
-# src/config/gpu_config.py
-import torch
-
-GPU_CONFIG = {
-    "device": "cuda" if torch.cuda.is_available() else "cpu",
-    "memory_fraction": 0.8,  # Utiliser 80% de la VRAM
-    "batch_size": {
-        "embedding": 32,
-        "sentiment": 16,
-        "summarization": 4,
-    },
-    "models": {
-        "bert": {
-            "name": "camembert/camembert-large",
-            "cache_dir": "/models/bert",
-            "fp16": True,  # Mixed precision
-        },
-        "t5": {
-            "name": "google/mt5-base",
-            "cache_dir": "/models/t5",
-            "fp16": True,
-        },
-        "spacy": {
-            "name": "fr_core_news_lg",
-        }
-    }
-}
-
-def configure_gpu():
-    if torch.cuda.is_available():
-        torch.cuda.set_per_process_memory_fraction(
-            GPU_CONFIG["memory_fraction"]
-        )
-        torch.backends.cudnn.benchmark = True
-```
-
-## Exemple d'implementation
-
-### FastAPI App avec Celery
-
-```python
-# src/main.py
-from fastapi import FastAPI
-from celery import Celery
-from src.routers import analysis_router, job_router, model_router
-from src.config import settings
-
-app = FastAPI(title="ai-analysis-service")
-
-# Celery configuration
-celery_app = Celery(
-    "ai_analysis",
-    broker=settings.REDIS_URL,
-    backend=settings.REDIS_URL
-)
-
-celery_app.conf.update(
-    task_serializer="json",
-    result_serializer="json",
-    accept_content=["json"],
-    task_track_started=True,
-    worker_prefetch_multiplier=1,  # Important pour GPU tasks
-)
-
-app.include_router(analysis_router, prefix="/api/v1/analysis")
-app.include_router(job_router, prefix="/api/v1/jobs")
-app.include_router(model_router, prefix="/api/v1/models")
-
-@app.on_event("startup")
-async def load_models():
-    """Pre-charger les modeles au demarrage"""
-    from src.services import model_manager
-    await model_manager.load_models()
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `APP_PORT` | 8083 | Port du service |
+| `VLLM_BASE_URL` | `http://localhost:8000` | URL serveur vLLM |
+| `VLLM_MODEL_NAME` | Ministral 3B | Modele a utiliser |
+| `VLLM_API_KEY` | EMPTY | Token bearer vLLM |
+| `VLLM_TIMEOUT` | 120.0 | Timeout appel LLM (secondes) |
+| `VLLM_MAX_TOKENS` | 4096 | Max tokens output |
+| `VLLM_TEMPERATURE` | 0.1 | Determinisme |
+| `DATABASE_URL` | - | PostgreSQL connection string |
+| `DATABASE_POOL_SIZE` | 5 | Taille pool connexions |
+| `NATS_URL` | nats://nats:4222 | URL NATS JetStream |
+| `NATS_STREAM_NAME` | VISIOBOOK_PROJECT | Nom du stream |
 
 ## Metriques de succes
 
 | Metrique | Objectif | Description |
 |----------|----------|-------------|
-| Analysis time | < 30s/page | Temps d'analyse par page |
-| Accuracy | > 85% | Precision extraction scenes |
-| GPU utilization | 70-90% | Utilisation GPU |
-| Memory | < 80% VRAM | Utilisation memoire GPU |
+| Analysis time | < 120s | Temps d'analyse (depend vLLM) |
 | Availability | > 99.5% | Disponibilite service |
+| NATS latency | < 100ms | Temps de traitement message NATS |
+| DB write | < 50ms | Temps ecriture resultats |

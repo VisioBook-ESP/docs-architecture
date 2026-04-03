@@ -146,6 +146,29 @@ class MetadataResponse(BaseModel):
     customFields: dict
 ```
 
+### DocumentController (`/api/v1/documents`)
+
+| Methode | Endpoint | Description | Auth |
+|---------|----------|-------------|------|
+| GET | `/{file_id}` | Recuperer le texte extrait d'un document | x-user-id |
+
+```python
+# GET /api/v1/documents/{file_id}
+# Retourne le texte extrait pour un fichier deja traite.
+# Utilise par core-project-service pour alimenter le workflow d'analyse.
+
+class DocumentTextResponse(BaseModel):
+    text: str              # Texte complet reconstruit depuis les chunks
+    wordCount: int         # Nombre de mots
+    metadata: dict         # Metadonnees du document
+
+# Erreurs:
+# 404 - Document non trouve ou non possede par l'utilisateur
+# 422 - Document pas encore traite (status != completed)
+```
+
+> **Note**: Cet endpoint est consomme par `core-project-service` lors de la creation d'un projet avec `fileId`. Le texte extrait est ensuite envoye a `ai-analysis-service` via NATS.
+
 ## Communications Inter-services
 
 ### Appels sortants

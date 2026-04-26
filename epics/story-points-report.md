@@ -1,6 +1,6 @@
 # Rapport Story Points — VisioBook
 
-> Dernière mise à jour : 2026-04-24
+> Dernière mise à jour : 2026-04-26
 
 ## Table de correspondance Story Points → Temps de développement
 
@@ -25,15 +25,15 @@
 
 | Membre | Rôle principal | SP réalisés | SP restants | SP total | Heures réalisées | Jours réalisés |
 |--------|---------------|:-----------:|:-----------:|:--------:|:----------------:|:--------------:|
+| **Marinegyt** | Mobile Flutter / Core User / Marketing | 190 | 144 | 334 | 76h | 10.9j |
 | **vicous6** | Infra / DevOps / Gateway | 168 | 80 | 248 | 67h | 9.6j |
-| **Marinegyt** | Mobile Flutter / Core User | 151 | 97 | 248 | 60h | 8.6j |
 | **Romain-Ber** | Backend (Project + Analysis) | 148 | 24 | 172 | 59h | 8.5j |
 | **VictorVattierEpitech** | IA (Analysis + Media + Storyboard) | 48 | 68 | 116 | 19h | 2.7j |
 | **FlorianBernier** | Backend (Payment + Notification) | 34 | 50 | 84 | 14h | 1.9j |
 | **Camserho** | Backend (Storage + Ingestion) | 44 | 5 | 49 | 18h | 2.5j |
 | **camilogzlez** | Frontend Web | 10 | 45 | 55 | 4h | 0.6j |
 | **TasseritNicolas** | Infra (CI/CD) | 19 | 0 | 19 | 8h | 1.1j |
-| **TOTAL** | | **622** | **369** | **991** | **249h** | **35.5j** |
+| **TOTAL** | | **661** | **416** | **1077** | **265h** | **37.8j** |
 
 ---
 
@@ -41,16 +41,17 @@
 
 | Service | SP Total | SP Done | SP Open | Heures total | Avancement |
 |---------|:--------:|:-------:|:-------:|:------------:|:----------:|
-| Mobile Flutter App | 168 | 107 | 61 | 67h | 64% |
 | Infra Helm Charts | 179 | 126 | 53 | 72h | 70% |
+| Mobile Flutter App | 168 | 107 | 61 | 67h | 64% |
 | Core Project Service | 143 | 135 | 8 | 57h | 94% |
 | Core User Service | 120 | 89 | 31 | 48h | 74% |
+| **Marketing Strategy** | **86** | **39** | **47** | **34h** | **45%** |
 | AI Analysis Service | 73 | 47 | 26 | 29h | 64% |
-| AI Media Generation | 53 | 24 | 29 | 21h | 45% |
 | Core Payment Service | 69 | 40 | 29 | 28h | 58% |
+| Web User Portal | 60 | 15 | 45 | 24h | 25% |
+| AI Media Generation | 53 | 24 | 29 | 21h | 45% |
 | Content Ingestion Service | 47 | 47 | 0 | 19h | 100% |
 | Support Storage Service | 47 | 37 | 10 | 19h | 79% |
-| Web User Portal | 60 | 15 | 45 | 24h | 25% |
 | Core API Gateway | 42 | 24 | 18 | 17h | 57% |
 | AI Storyboard Assembly | 34 | 0 | 34 | 14h | 0% |
 | Core Notification Service | 21 | 0 | 21 | 8h | 0% |
@@ -62,10 +63,10 @@
 
 | Type | Issues | SP | % effort |
 |------|:------:|:--:|:--------:|
-| **enabler** | ~120 | ~400 | 40% |
-| **feature** | ~85 | ~470 | 47% |
-| **test** | ~18 | ~100 | 10% |
-| **fix** / **deployment** | ~6 | ~21 | 3% |
+| **enabler** | ~120 | ~400 | 37% |
+| **feature** | ~97 | ~556 | 52% |
+| **test** | ~18 | ~100 | 9% |
+| **fix** / **deployment** | ~6 | ~21 | 2% |
 
 ---
 
@@ -73,24 +74,25 @@
 
 | Métrique | Valeur |
 |----------|--------|
-| **Total Story Points** | 991 SP |
-| **Story Points livrés** | 622 SP (63%) |
-| **Story Points restants** | 369 SP (37%) |
-| **Heures de dev réalisées** | ~249h |
-| **Jours-homme réalisés** | ~35.5 jours |
-| **Nombre d'issues** | 229 |
-| **Issues fermées** | 164 (72%) |
-| **Issues ouvertes** | 65 (28%) |
+| **Total Story Points** | 1077 SP |
+| **Story Points livrés** | 661 SP (61%) |
+| **Story Points restants** | 416 SP (39%) |
+| **Heures de dev réalisées** | ~265h |
+| **Jours-homme réalisés** | ~37.8 jours |
+| **Nombre d'issues** | 241 |
+| **Issues fermées** | 169 (70%) |
+| **Issues ouvertes** | 72 (30%) |
 | **Membres actifs** | 8 |
-| **Microservices** | 13 |
+| **Repos** | 14 (13 microservices + 1 marketing) |
 | **Durée du projet** | Août 2025 → Août 2026 (12 mois) |
-| **Rythme** | ~1 jour/semaine par développeur |
+| **Rythme** | ~1 jour/semaine par membre |
 
 ---
 
 ## Liens
 
 - [Roadmap Globale (GitHub Project)](https://github.com/orgs/VisioBook-ESP/projects/5)
+- [Marketing Kanban (GitHub Project)](https://github.com/orgs/VisioBook-ESP/projects/15)
 - [Planning PI 3.3 & PI 4](./planning-pi3-pi4.md)
 - [Diagramme de Gantt](./gantt.html)
 - [User Stories](./user_stories.md)

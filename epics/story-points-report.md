@@ -28,12 +28,12 @@
 | **Marinegyt** | Mobile Flutter / Core User / Marketing | 259 | 83 | 342 |
 | **vicous6** | Infra / DevOps / Gateway | 186 | 56 | 242 |
 | **Romain-Ber** | Backend (Project + Analysis) | 154 | 16 | 170 |
-| **VictorVattierEpitech** | IA (Analysis + Media Gen) | 64 | 18 | 82 |
-| **Camserho** | Backend (Storage + Ingestion) | 62 | 5 | 67 |
+| **VictorVattierEpitech** | IA (Analysis + Media Gen) | 97 | 18 | 115 |
+| **TasseritNicolas** | Infra (CI/CD, Minikube, ArgoCD) | 96 | 0 | 96 |
+| **Camserho** | Backend (Storage + Ingestion) | 84 | 5 | 89 |
+| **camilogzlez** | Frontend Web | 26 | 32 | 58 |
 | **FlorianBernier** | Backend (Payment + Notification) | 34 | 21 | 55 |
-| **TasseritNicolas** | Infra (CI/CD) | 24 | 0 | 24 |
-| **camilogzlez** | Frontend Web | 10 | 32 | 42 |
-| **TOTAL** | | **793** | **231** | **1024** |
+| **TOTAL** | | **936** | **231** | **1167** |
 
 ---
 
@@ -41,19 +41,19 @@
 
 | Service | SP Total | SP Done | SP Open | Avancement |
 |---------|:--------:|:-------:|:-------:|:----------:|
-| Content Ingestion Service | 47 | 47 | 0 | **100%** |
+| Content Ingestion Service | 59 | 59 | 0 | **100%** |
 | Docs / Transversal | 13 | 13 | 0 | **100%** |
 | Core Project Service | 141 | 133 | 8 | **94%** |
 | Core User Service | 124 | 108 | 16 | **87%** |
+| Infra Helm Charts | 232 | 200 | 32 | **86%** |
 | Mobile Flutter App | 159 | 136 | 23 | **85%** |
-| Support Storage Service | 47 | 39 | 8 | **82%** |
-| Infra Helm Charts | 160 | 128 | 32 | **80%** |
-| AI Analysis Service | 65 | 52 | 13 | **80%** |
-| AI Media Generation | 45 | 32 | 13 | **71%** |
+| Support Storage Service | 57 | 49 | 8 | **85%** |
+| AI Analysis Service | 83 | 70 | 13 | **84%** |
+| AI Media Generation | 60 | 47 | 13 | **78%** |
 | Core Payment Service | 61 | 40 | 21 | 65% |
 | Core API Gateway | 42 | 24 | 18 | 57% |
+| Web User Portal | 63 | 31 | 32 | 49% |
 | Marketing Strategy | 86 | 39 | 47 | 45% |
-| Web User Portal | 47 | 15 | 32 | 31% |
 
 ---
 
@@ -61,10 +61,10 @@
 
 | Type | Issues | SP | % effort |
 |------|:------:|:--:|:--------:|
-| **enabler** | ~120 | ~400 | 39% |
-| **feature** | ~97 | ~500 | 49% |
-| **test** | ~18 | ~100 | 10% |
-| **fix** / **deployment** | ~8 | ~24 | 2% |
+| **enabler** | ~130 | ~480 | 41% |
+| **feature** | ~97 | ~540 | 46% |
+| **test** | ~19 | ~110 | 10% |
+| **fix** / **deployment** | ~8 | ~37 | 3% |
 
 ---
 
@@ -72,12 +72,12 @@
 
 | Métrique | Valeur |
 |----------|--------|
-| **Total Story Points** | 1024 SP |
-| **Story Points livrés** | 793 SP (**77%**) |
-| **Story Points restants** | 231 SP (23%) |
-| **Nombre d'issues** | 243 |
-| **Issues fermées** | 181 (**74%**) |
-| **Issues ouvertes** | 62 (26%) |
+| **Total Story Points** | 1167 SP |
+| **Story Points livrés** | 936 SP (**80%**) |
+| **Story Points restants** | 231 SP (20%) |
+| **Nombre d'issues** | 254 |
+| **Issues fermées** | 199 (**78%**) |
+| **Issues ouvertes** | 55 (22%) |
 | **Membres actifs** | 8 |
 | **Repos** | 14 |
 | **Durée du projet** | Août 2025 → Août 2026 (12 mois) |

@@ -1,6 +1,6 @@
 # Rapport Story Points — VisioBook
 
-> Dernière mise à jour : 2026-04-26
+> Dernière mise à jour : 2026-05-07
 
 ## Table de correspondance Story Points → Temps de développement
 
@@ -25,15 +25,15 @@
 
 | Membre | Rôle principal | SP réalisés | SP restants | SP total | Heures réalisées | Jours réalisés |
 |--------|---------------|:-----------:|:-----------:|:--------:|:----------------:|:--------------:|
-| **Marinegyt** | Mobile Flutter / Core User / Marketing | 190 | 144 | 334 | 76h | 10.9j |
-| **vicous6** | Infra / DevOps / Gateway | 168 | 80 | 248 | 67h | 9.6j |
-| **Romain-Ber** | Backend (Project + Analysis) | 148 | 24 | 172 | 59h | 8.5j |
-| **VictorVattierEpitech** | IA (Analysis + Media + Storyboard) | 48 | 68 | 116 | 19h | 2.7j |
-| **FlorianBernier** | Backend (Payment + Notification) | 34 | 50 | 84 | 14h | 1.9j |
-| **Camserho** | Backend (Storage + Ingestion) | 44 | 5 | 49 | 18h | 2.5j |
-| **camilogzlez** | Frontend Web | 10 | 45 | 55 | 4h | 0.6j |
-| **TasseritNicolas** | Infra (CI/CD) | 19 | 0 | 19 | 8h | 1.1j |
-| **TOTAL** | | **661** | **416** | **1077** | **265h** | **37.8j** |
+| **Marinegyt** | Mobile Flutter / Core User / Marketing | 259 | 83 | 342 | 104h | 14.8j |
+| **vicous6** | Infra / DevOps / Gateway | 186 | 56 | 242 | 74h | 10.6j |
+| **Romain-Ber** | Backend (Project + Analysis) | 154 | 16 | 170 | 62h | 8.8j |
+| **VictorVattierEpitech** | IA (Analysis + Media + Storyboard) | 64 | 18 | 82 | 26h | 3.7j |
+| **Camserho** | Backend (Storage + Ingestion) | 62 | 5 | 67 | 25h | 3.5j |
+| **FlorianBernier** | Backend (Payment + Notification) | 34 | 21 | 55 | 14h | 1.9j |
+| **TasseritNicolas** | Infra (CI/CD) | 24 | 0 | 24 | 10h | 1.4j |
+| **camilogzlez** | Frontend Web | 10 | 32 | 42 | 4h | 0.6j |
+| **TOTAL** | | **793** | **231** | **1024** | **317h** | **45.3j** |
 
 ---
 
@@ -41,21 +41,18 @@
 
 | Service | SP Total | SP Done | SP Open | Heures total | Avancement |
 |---------|:--------:|:-------:|:-------:|:------------:|:----------:|
-| Infra Helm Charts | 179 | 126 | 53 | 72h | 70% |
-| Mobile Flutter App | 168 | 107 | 61 | 67h | 64% |
-| Core Project Service | 143 | 135 | 8 | 57h | 94% |
-| Core User Service | 120 | 89 | 31 | 48h | 74% |
-| **Marketing Strategy** | **86** | **39** | **47** | **34h** | **45%** |
-| AI Analysis Service | 73 | 47 | 26 | 29h | 64% |
-| Core Payment Service | 69 | 40 | 29 | 28h | 58% |
-| Web User Portal | 60 | 15 | 45 | 24h | 25% |
-| AI Media Generation | 53 | 24 | 29 | 21h | 45% |
-| Content Ingestion Service | 47 | 47 | 0 | 19h | 100% |
-| Support Storage Service | 47 | 37 | 10 | 19h | 79% |
+| Infra Helm Charts | 160 | 128 | 32 | 64h | **80%** |
+| Mobile Flutter App | 159 | 136 | 23 | 64h | **85%** |
+| Core Project Service | 141 | 133 | 8 | 56h | **94%** |
+| Core User Service | 124 | 108 | 16 | 50h | **87%** |
+| Marketing Strategy | 86 | 39 | 47 | 34h | 45% |
+| AI Analysis Service | 65 | 52 | 13 | 26h | **80%** |
+| Core Payment Service | 61 | 40 | 21 | 24h | 65% |
+| Content Ingestion Service | 47 | 47 | 0 | 19h | **100%** |
+| Support Storage Service | 47 | 39 | 8 | 19h | **82%** |
+| Web User Portal | 47 | 15 | 32 | 19h | 31% |
+| AI Media Generation | 45 | 32 | 13 | 18h | **71%** |
 | Core API Gateway | 42 | 24 | 18 | 17h | 57% |
-| AI Storyboard Assembly | 34 | 0 | 34 | 14h | 0% |
-| Core Notification Service | 21 | 0 | 21 | 8h | 0% |
-| Docs / Transversal | 13 | 0 | 13 | 5h | 0% |
 
 ---
 
@@ -63,10 +60,10 @@
 
 | Type | Issues | SP | % effort |
 |------|:------:|:--:|:--------:|
-| **enabler** | ~120 | ~400 | 37% |
-| **feature** | ~97 | ~556 | 52% |
-| **test** | ~18 | ~100 | 9% |
-| **fix** / **deployment** | ~6 | ~21 | 2% |
+| **enabler** | ~120 | ~400 | 39% |
+| **feature** | ~97 | ~500 | 49% |
+| **test** | ~18 | ~100 | 10% |
+| **fix** / **deployment** | ~8 | ~24 | 2% |
 
 ---
 
@@ -74,16 +71,16 @@
 
 | Métrique | Valeur |
 |----------|--------|
-| **Total Story Points** | 1077 SP |
-| **Story Points livrés** | 661 SP (61%) |
-| **Story Points restants** | 416 SP (39%) |
-| **Heures de dev réalisées** | ~265h |
-| **Jours-homme réalisés** | ~37.8 jours |
-| **Nombre d'issues** | 241 |
-| **Issues fermées** | 169 (70%) |
-| **Issues ouvertes** | 72 (30%) |
+| **Total Story Points** | 1024 SP |
+| **Story Points livrés** | 793 SP (**77%**) |
+| **Story Points restants** | 231 SP (23%) |
+| **Heures de dev réalisées** | ~317h |
+| **Jours-homme réalisés** | ~45.3 jours |
+| **Nombre d'issues** | 243 |
+| **Issues fermées** | 181 (**74%**) |
+| **Issues ouvertes** | 62 (26%) |
 | **Membres actifs** | 8 |
-| **Repos** | 14 (13 microservices + 1 marketing) |
+| **Repos** | 14 (12 microservices + 1 marketing + 1 docs) |
 | **Durée du projet** | Août 2025 → Août 2026 (12 mois) |
 | **Rythme** | ~1 jour/semaine par membre |
 
